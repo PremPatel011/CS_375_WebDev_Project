@@ -1,6 +1,10 @@
 {
+  "scripts": {
+    "start": "cd app && node server.js"
+  },
   "dependencies": {
     "express": "^5.1.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "three": "^0.180.0"
   }
 }
