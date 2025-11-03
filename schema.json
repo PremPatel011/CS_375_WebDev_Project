@@ -1,0 +1,25 @@
+
+
+{
+    "Table_Name": "users", 
+    "data": {
+        "username" : "string",
+        "profile_pic": "string",
+        "bio" : "string",
+        "frields_list" : "List"
+        
+    },
+    
+    "Table_Name": "friends", 
+    "data": {
+        "user_id" : "string",
+        "friend_id": "string"
+    },
+
+    "Table_Name": "tracks", 
+    "data": {
+        "track_id" : "string",
+        "": "string"
+    }    
+
+}
