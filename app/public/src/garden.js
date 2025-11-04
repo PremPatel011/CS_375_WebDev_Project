@@ -3,6 +3,9 @@ import * as THREE from 'https://unpkg.com/three@latest/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@latest/examples/jsm/controls/OrbitControls.js?module';
 import { SimplexNoise } from 'https://unpkg.com/three@latest/examples/jsm/math/SimplexNoise.js';
 
+import { EffectComposer } from 'https://unpkg.com/three/examples/jsm/postprocessing/EffectComposer.js?module';
+import { RenderPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js?module';
+import { UnrealBloomPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/UnrealBloomPass.js?module';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -13,7 +16,14 @@ renderer.setSize(window.innerWidth, window.innerHeight, true);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.85);
+composer.addPass(bloom);
 
 const controls = new OrbitControls( camera, renderer.domElement );
 camera.position.set(15, 25, 50);
@@ -23,10 +33,13 @@ controls.update();
 
 scene.background = new THREE.Color(0x65C1BC);
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+const envLight = new THREE.HemisphereLight(0x88ccff, 0x226622, 0.6);
+scene.add(envLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffeedd, 1);
+const sunLight = new THREE.DirectionalLight(0xffeedd, 1.4);
 sunLight.position.set(10, 10, 5);
 sunLight.castShadow = true;
 sunLight.shadow.camera.left = -80;
@@ -35,6 +48,10 @@ sunLight.shadow.camera.top = 80;
 sunLight.shadow.camera.bottom = -80;
 sunLight.shadow.mapSize.width = 2048;
 sunLight.shadow.mapSize.height = 2048;
+
+sunLight.shadow.bias = -0.0005;
+sunLight.color.setHex(0xffddaa);
+
 scene.add(sunLight);
 
 // island scale based on loudness, island mountain heights based on energy or terrain based on energy in genereal
@@ -74,8 +91,8 @@ function generateIsland(loudness, energy) {
 
     // sharper peaks - add a nonlinear boost like height = Math.pow(height, 1.3) after computing.
 
-    // Raise a bit to avoid too low center
-    if (height < 1) height *= 0.5;
+    // raise a bit to avoid too low center
+    if (height < 1) height *= 0.25;
 
     vertices[i + 2] = height;
 
@@ -84,7 +101,9 @@ function generateIsland(loudness, energy) {
       color.setHex(0xCBBD93); // sand
     } else if (height < 4) {
       color.setHex(0x7EB26D); // grass
-    } else if (height < 10) {
+    } else if (height < 8) {
+      color.setHex(0x568248); // rocky greens
+    } else if (height < 12) {
       color.setHex(0x6B4F36); // rocky greens
     } else if (height < 16) {
       color.setHex(0x4B3A2B); // mountain
@@ -101,8 +120,8 @@ function generateIsland(loudness, energy) {
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     flatShading: true,
-    roughness: 0.9,
-    metalness: 0.1,
+    roughness: 0.6,
+    metalness: 0.3,
   });
 
   const mesh = new THREE.Mesh(geometry, material);
@@ -122,7 +141,7 @@ const oceanMaterial = new THREE.MeshStandardMaterial({
                                   color: 0x3a9bd4, 
                                   flatShading: true,
                                   roughness: 0.4,
-                                  metalness: 0.3,
+                                  metalness: 0.6,
                                   transparent: true,
                                   opacity: 0.85
                                 });
@@ -159,6 +178,10 @@ const waveParams = {
   heightY: 0.5,
 };
 
+// generate trees/foliage
+
+// liveness - fireflies, particles, birds
+
 function animate(time) {
   const t = time * 0.001;
   
@@ -166,7 +189,8 @@ function animate(time) {
   
   controls.update();
 
-  renderer.render(scene, camera);
+  // renderer.render(scene, camera);
+  composer.render();
   requestAnimationFrame(animate);
 }
 
