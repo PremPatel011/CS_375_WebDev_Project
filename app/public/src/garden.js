@@ -2,14 +2,13 @@
 import * as THREE from 'https://unpkg.com/three@latest/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@latest/examples/jsm/controls/OrbitControls.js?module';
 import { SimplexNoise } from 'https://unpkg.com/three@latest/examples/jsm/math/SimplexNoise.js';
-
 import { EffectComposer } from 'https://unpkg.com/three/examples/jsm/postprocessing/EffectComposer.js?module';
 import { RenderPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js?module';
 import { UnrealBloomPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/UnrealBloomPass.js?module';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.z = 5;
+camera.position.set(15, 25, 50);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight, true);
@@ -20,13 +19,10 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
 
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.85);
-composer.addPass(bloom);
-
 const controls = new OrbitControls( camera, renderer.domElement );
-camera.position.set(15, 25, 50);
+controls.maxDistance = 100;
+controls.minDistance = 50;
+controls.maxPolarAngle = Math.PI/2.2;
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.update();
@@ -53,6 +49,13 @@ sunLight.shadow.bias = -0.0005;
 sunLight.color.setHex(0xffddaa);
 
 scene.add(sunLight);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.85);
+composer.addPass(bloom);
+
+// scene.fog = new THREE.Fog(0x87ceeb, 12, 225);
 
 // island scale based on loudness, island mountain heights based on energy or terrain based on energy in genereal
 function generateIsland(loudness, energy) {
