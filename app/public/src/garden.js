@@ -105,9 +105,9 @@ function generateIsland(loudness, energy) {
     } else if (height < 4) {
       color.setHex(0x7EB26D); // grass
     } else if (height < 8) {
-      color.setHex(0x568248); // rocky greens
+      color.setHex(0x568248); // darker greens
     } else if (height < 12) {
-      color.setHex(0x6B4F36); // rocky greens
+      color.setHex(0x6B4F36); // rocky 
     } else if (height < 16) {
       color.setHex(0x4B3A2B); // mountain
     } else {
@@ -182,6 +182,72 @@ const waveParams = {
 };
 
 // generate trees/foliage
+const treeGeometry = new THREE.ConeGeometry( 1, 2.5, 3 );
+const treeMaterial = new THREE.MeshStandardMaterial( { 
+  color: 0x2E6F40,
+  flatShading: true,
+  roughness: 0.8,
+  metalness: 0.3,
+} );
+
+
+
+function createGrassBundle() {
+  const bundle = new THREE.Group();
+  const bladeCount = 10; // number of blades per patch
+
+  const bladeGeometry = new THREE.PlaneGeometry(0.05, 0.4);
+  const bladeMaterial = new THREE.MeshToonMaterial({
+    color: 0x3fa34d,
+    side: THREE.DoubleSide,
+  });
+
+  for (let i = 0; i < bladeCount; i++) {
+    const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+
+    // random offset within the patch
+    blade.position.x = (Math.random() - 0.5) * 0.2;
+    blade.position.z = (Math.random() - 0.5) * 0.2;
+
+    // random tilt and rotation
+    blade.rotation.y = Math.random() * Math.PI;
+    // blade.rotation.x = (Math.random() - 0.3) * 0.1;
+
+    blade.rotation.x = -Math.PI/2;
+
+    // varied height
+    blade.scale.y = 0.8 + Math.random() * 0.5;
+
+    bundle.add(blade);
+  }
+
+  return bundle;
+}
+
+const positions = island.geometry.attributes.position.array;
+
+for (let i = 0; i < positions.length; i += 3) {
+
+  if ((Math.random() * 100) > 10) continue; // spread out
+
+  const x = positions[i];
+  const y = positions[i + 1];
+  const z = positions[i + 2];
+
+  if (z < 1 || z >= 6) continue; // trees go lower?
+
+  const tree = new THREE.Mesh(treeGeometry, treeMaterial);
+  tree.position.set(x, y, z+1);
+
+  // const grass = createGrassBundle();
+  // grass.position.set(x, y, z);
+
+  tree.rotation.x = Math.PI/2;
+  tree.castShadow = true;
+  tree.receiveShadow = true;
+
+  island.add(tree);
+}
 
 // liveness - fireflies, particles, birds
 
