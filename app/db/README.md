@@ -1,11 +1,12 @@
 # Database migration: users table
 
-This folder contains a small SQL query's to create a `users` table used for authentication.
+This folder contains a small SQL query's to create a `users` and `friends` table.
 
 Run (from a shell with psql).
 
-```powershell
-psql -U postgres -d garden -f app/db/create_users.sql
+```powershell (run this first to delete table and re-create it)
+psql -U postgres -d garden -c "DROP TABLE IF EXISTS friends; DROP TABLE IF EXISTS users;"
+psql -U postgres -d garden -f db/create_users.sql
 ```
 
 Notes:
