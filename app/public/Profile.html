@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>My Profile</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 1rem; max-width: 720px; margin: auto; }
+      label { display:block; margin-top:0.75rem; font-weight:600; }
+      input, textarea { width:100%; padding:0.5rem; margin-top:0.25rem; }
+      img.avatar { width:96px; height:96px; border-radius:50%; object-fit:cover; display:block; margin-bottom:0.5rem; }
+      button { margin-top: 1rem; padding:0.6rem 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>My Profile</h1>
+
+    <div id="profile">
+      <!-- Still need to add image container to display user profile picture (work in progress) -->
+      <div>
+        <label>Spotify display name</label>
+        <input id="display_name" readonly />
+      </div>
+      <div>
+        <label>Username (site)</label>
+        <input id="username" />
+      </div>
+      <div>
+        <label>Profile picture URL</label>
+        <input id="profile_pic_url" placeholder="https://..." />
+      </div>
+      <div>
+        <label>Bio</label>
+        <textarea id="bio" rows="4"></textarea>
+      </div>
+
+      <button id="save">Save profile</button>
+      <button id="logout">Log out (clear session)</button>
+    </div>
+
+    <script type="module" src="/src/profile.js"></script>
+  </body>
+</html>
