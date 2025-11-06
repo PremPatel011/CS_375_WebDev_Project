@@ -10,6 +10,14 @@
       input, textarea { width:100%; padding:0.5rem; margin-top:0.25rem; }
       img.avatar { width:96px; height:96px; border-radius:50%; object-fit:cover; display:block; margin-bottom:0.5rem; }
       button { margin-top: 1rem; padding:0.6rem 1rem; }
+      section { margin-top: 2rem; }
+      .post { border:1px solid #ccc; border-radius:6px; padding:0.75rem; margin-top:1rem; }
+      .post time { display:block; font-size:0.85rem; color:#555; margin-bottom:0.5rem; }
+      .comments { border-top:1px solid #eee; margin-top:0.75rem; padding-top:0.75rem; }
+      .comment { margin-top:0.5rem; font-size:0.95rem; }
+      .comment time { display:block; font-size:0.8rem; color:#666; }
+      .comment-form { display:flex; gap:0.5rem; margin-top:0.75rem; }
+      .comment-form input { flex:1; margin-top:0; }
     </style>
   </head>
   <body>
@@ -17,6 +25,7 @@
 
     <div id="profile">
       <!-- Still need to add image container to display user profile picture (work in progress) -->
+      <img id="avatar" class="avatar" hidden />
       <div>
         <label>Spotify display name</label>
         <input id="display_name" readonly />
@@ -37,6 +46,16 @@
       <button id="save">Save profile</button>
       <button id="logout">Log out (clear session)</button>
     </div>
+
+    <section id="posts">
+      <h2>My Posts</h2>
+      <div>
+        <label for="post_content">Create a post</label>
+        <textarea id="post_content" rows="3" placeholder="What's on your mind?"></textarea>
+        <button id="create_post">Post</button>
+      </div>
+      <div id="posts_list"></div>
+    </section>
 
     <script type="module" src="/src/profile.js"></script>
   </body>
