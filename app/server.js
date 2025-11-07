@@ -252,6 +252,116 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+// Create a new post for the current user
+app.post('/api/posts', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const content = (req.body && req.body.content ? req.body.content : '').trim();
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+
+  try {
+    const q = `INSERT INTO posts (user_id, content) VALUES ($1, $2)
+               RETURNING id, content, created_at`;
+    const result = await pool.query(q, [sess.userId, content]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('POST /api/posts error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all posts (with comments) for the current user
+app.get('/api/posts', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const postsResult = await pool.query(
+      `SELECT id, content, created_at
+       FROM posts
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [sess.userId]
+    );
+
+    const posts = postsResult.rows;
+    if (posts.length === 0) {
+      return res.json([]);
+    }
+
+    const postIds = posts.map((p) => p.id);
+    const commentsResult = await pool.query(
+      `SELECT c.id, c.post_id, c.content, c.created_at,
+              u.username AS author_username,
+              u.display_name AS author_display_name
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.post_id = ANY($1::int[])
+       ORDER BY c.created_at ASC`,
+      [postIds]
+    );
+
+    const commentsByPost = new Map();
+    for (const row of commentsResult.rows) {
+      if (!commentsByPost.has(row.post_id)) {
+        commentsByPost.set(row.post_id, []);
+      }
+      commentsByPost.get(row.post_id).push({
+        id: row.id,
+        content: row.content,
+        created_at: row.created_at,
+        author_username: row.author_username,
+        author_display_name: row.author_display_name
+      });
+    }
+
+    const withComments = posts.map((post) => ({
+      id: post.id,
+      content: post.content,
+      created_at: post.created_at,
+      comments: commentsByPost.get(post.id) || []
+    }));
+
+    res.json(withComments);
+  } catch (err) {
+    console.error('GET /api/posts error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add a comment to a post
+app.post('/api/posts/:postId/comments', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const postId = parseInt(req.params.postId, 10);
+  if (Number.isNaN(postId)) return res.status(400).json({ error: 'Invalid post id' });
+
+  const content = (req.body && req.body.content ? req.body.content : '').trim();
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+
+  try {
+    const postExists = await pool.query(
+      `SELECT id FROM posts WHERE id = $1`,
+      [postId]
+    );
+    if (postExists.rowCount === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const q = `INSERT INTO comments (post_id, user_id, content)
+               VALUES ($1, $2, $3)
+               RETURNING id, content, created_at`;
+    const result = await pool.query(q, [postId, sess.userId, content]);
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('POST /api/posts/:postId/comments error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 app.listen(port, hostname, () => {
   console.log(`Listening at: http://${hostname}:${port}`);
