@@ -38,7 +38,6 @@ async function loadProfile() {
     const p = await apiGet('/api/me');
     getElement('display_name').value = p.display_name || '';
     getElement('username').value = p.username || '';
-    getElement('profile_pic_url').value = p.profile_pic_url || '';
     getElement('bio').value = p.bio || '';
     if (p.profile_pic_url) {
       const avatar = getElement('avatar');
@@ -65,7 +64,6 @@ async function loadProfile() {
 async function saveProfile() {
   const body = {
     username: getElement('username').value,
-    profile_pic_url: getElement('profile_pic_url').value,
     bio: getElement('bio').value
   };
   try {
@@ -77,6 +75,33 @@ async function saveProfile() {
     console.error('Save failed', err);
     alert('Save failed');
   }
+}
+
+async function uploadAvatar() {
+  const input = getElement('avatar_file');
+  if (!input || !input.files || input.files.length === 0) {
+    alert('Please choose an image file to upload.');
+    return;
+  }
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const dataUrl = reader.result;
+    try {
+      const res = await apiPost('/api/me/avatar', { image: dataUrl });
+      // update UI with returned profile_pic_url
+      if (res && res.profile_pic_url) {
+        const avatar = getElement('avatar');
+        avatar.src = res.profile_pic_url;
+        avatar.hidden = false;
+      }
+      alert('Upload successful');
+    } catch (err) {
+      console.error('Avatar upload failed', err);
+      alert('Avatar upload failed');
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 function logout() {
@@ -292,6 +317,9 @@ getElement('create_post').addEventListener('click', (event) => {
   event.preventDefault();
   createPost();
 });
+
+const uploadBtn = getElement('upload_avatar');
+if (uploadBtn) uploadBtn.addEventListener('click', uploadAvatar);
 
 loadProfile();
 loadPosts();
