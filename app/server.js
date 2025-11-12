@@ -4,6 +4,8 @@ const app = express();
 
 const crypto = require('crypto');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const { URLSearchParams } = require('url');
 
 // Need to match the Spotify redirect URI (http://127.0.0.1:8000/...)
@@ -18,8 +20,7 @@ pool.connect().then(function () {
 });
 
 app.use(express.static("public"));
-app.use(express.json()); 
-
+app.use(express.json({ limit: '8mb' }))
 
 const sessions = new Map();
 
@@ -143,14 +144,16 @@ app.get('/auth/spotify/callback', async (req, res) => {
         INSERT INTO users (spotify_id, username, display_name, email, profile_pic_url, updated_at)
         VALUES ($1, $2, $3, $4, $5, now())
         ON CONFLICT (spotify_id) DO UPDATE SET
-          -- preserve any custom username: only replace if it's NULL or still equal to the spotify_id
           username = CASE
             WHEN users.username IS NULL OR users.username = users.spotify_id THEN EXCLUDED.username
             ELSE users.username
           END,
           display_name = EXCLUDED.display_name,
           email = EXCLUDED.email,
-          profile_pic_url = EXCLUDED.profile_pic_url,
+          profile_pic_url = CASE
+            WHEN users.profile_pic_url IS NULL OR users.profile_pic_url NOT LIKE '/uploads/%' THEN EXCLUDED.profile_pic_url
+            ELSE users.profile_pic_url
+          END,
           updated_at = now()
         RETURNING id, spotify_id, username, display_name, email, profile_pic_url;
       `;
@@ -260,6 +263,57 @@ app.get('/api/users/:id', async (req, res) => {
     console.error('GET /api/users/:id error', err);
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// Add avatar upload endpoint
+app.post('/api/me/avatar', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const imageData = req.body && req.body.image;
+  if (!imageData || typeof imageData !== 'string' || !imageData.startsWith('data:')) {
+    return res.status(400).json({ error: 'Invalid image payload' });
+  }
+
+  const matches = imageData.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!matches) return res.status(400).json({ error: 'Malformed data URL' });
+
+  const mime = matches[1]; // e.g. image/png
+  const base64 = matches[2];
+   
+  const ext = mime.split('/')[1] === 'jpeg' ? 'jpg' : mime.split('/')[1];
+  const buffer = Buffer.from(base64, 'base64');
+
+  try {
+    const uploadsDir = path.join(__dirname, 'public', 'uploads');
+    fs.mkdirSync(uploadsDir, { recursive: true });
+
+    // Use deterministic filename per user to avoid duplicate files
+    const filename = `avatar_${sess.userId}.${ext}`;
+    const filepath = path.join(uploadsDir, filename);
+
+    // Remove any previous avatar files for this user with different extensions or timestamps
+    const files = fs.readdirSync(uploadsDir);
+    for (const f of files) {
+      if (f.startsWith(`avatar_${sess.userId}`) && f !== filename) {
+        try { fs.unlinkSync(path.join(uploadsDir, f)); } catch (e) { /* ignore */ }
+      }
+    }
+
+    fs.writeFileSync(filepath, buffer);
+    const publicUrl = `/uploads/${filename}`;
+
+    // update DB (persist the local uploads URL)
+    const sql = `UPDATE users SET profile_pic_url = $1, updated_at = now() WHERE id = $2 RETURNING profile_pic_url`;
+    const result = await pool.query(sql, [publicUrl, sess.userId]);
+
+    // return the exact publicUrl we wrote
+    res.json({ profile_pic_url: result.rows[0].profile_pic_url || publicUrl });
+  } catch (err) {
+    console.error('Avatar save error', err);
+    res.status(500).json({ error: 'Failed to save avatar' });
+  }
+
 });
 
 // Create a new post for the current user
