@@ -29,7 +29,12 @@ createdb garden
 The SQL schema for the `users` table is included in `app/db/create_users.sql`.
 
 Run the following command from the project root:
+
 ```bash
+# Run this only if you have existing tables that are outdated and want them removed. 
+psql -U postgres -d garden -c "DROP TABLE IF EXISTS comments, posts, friends, users CASCADE;"
+
+# Run this to create the tables
 psql -U postgres -d garden -f app/db/create_users.sql
 ```
 

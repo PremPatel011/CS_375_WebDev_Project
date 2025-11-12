@@ -202,6 +202,90 @@ async function createPost() {
   }
 }
 
+async function loadSpotifyTop() {
+  try {
+    const data = await apiGet('/api/spotify/top');
+
+    // create container if not present
+    let container = document.getElementById('spotify_top');
+    if (!container) {
+      container = document.createElement('section');
+      container.id = 'spotify_top';
+      const h = document.createElement('h2');
+      h.textContent = 'Your Top Spotify';
+      container.appendChild(h);
+      document.getElementById('profile').insertAdjacentElement('afterend', container);
+    } else {
+      container.innerHTML = '<h2>Your Top Spotify</h2>';
+    }
+
+    // Genres
+    const gwrap = document.createElement('div');
+    gwrap.innerHTML = '<h3>Top Genres</h3>';
+    if (data.genres && data.genres.length) {
+      const ul = document.createElement('ul');
+      for (const g of data.genres) {
+        const li = document.createElement('li');
+        li.textContent = `${g.name} (${g.count})`;
+        ul.appendChild(li);
+      }
+      gwrap.appendChild(ul);
+    } else {
+      gwrap.appendChild(Object.assign(document.createElement('p'), { textContent: 'No genres available.' }));
+    }
+    container.appendChild(gwrap);
+
+    // Artists
+    const awrap = document.createElement('div');
+    awrap.innerHTML = '<h3>Top Artists</h3>';
+    if (data.artists && data.artists.length) {
+      const ul = document.createElement('ul');
+      for (const a of data.artists) {
+        const li = document.createElement('li');
+        const name = a.name || 'Unknown';
+        const img = a.images && a.images[0] ? a.images[0].url : null;
+        li.textContent = name;
+        if (img) {
+          const i = document.createElement('img');
+          i.src = img;
+          i.alt = name;
+          i.style.width = '48px';
+          i.style.height = '48px';
+          i.style.objectFit = 'cover';
+          i.style.marginRight = '8px';
+          li.prepend(i);
+        }
+        ul.appendChild(li);
+      }
+      awrap.appendChild(ul);
+    } else {
+      awrap.appendChild(Object.assign(document.createElement('p'), { textContent: 'No artists available.' }));
+    }
+    container.appendChild(awrap);
+
+    // Tracks
+    const twrap = document.createElement('div');
+    twrap.innerHTML = '<h3>Top Tracks</h3>';
+    if (data.tracks && data.tracks.length) {
+      const ul = document.createElement('ul');
+      for (const t of data.tracks) {
+        const li = document.createElement('li');
+        const title = t.name || 'Unknown';
+        const artists = (t.artists || []).map(a => a.name).join(', ');
+        li.textContent = `${title} — ${artists}`;
+        ul.appendChild(li);
+      }
+      twrap.appendChild(ul);
+    } else {
+      twrap.appendChild(Object.assign(document.createElement('p'), { textContent: 'No tracks available.' }));
+    }
+    container.appendChild(twrap);
+  } catch (err) {
+    console.error('Failed to load Spotify top', err);
+    // ignore silently; user may be unauthenticated
+  }
+}
+
 getElement('save').addEventListener('click', saveProfile);
 getElement('logout').addEventListener('click', logout);
 getElement('create_post').addEventListener('click', (event) => {
@@ -211,3 +295,4 @@ getElement('create_post').addEventListener('click', (event) => {
 
 loadProfile();
 loadPosts();
+loadSpotifyTop();

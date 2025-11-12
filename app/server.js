@@ -58,7 +58,7 @@ app.get('/auth/spotify', (req, res) => {
     response_type: 'code',
     redirect_uri: SPOTIFY_REDIRECT_URI,
     state,
-    scope: 'user-read-email user-read-private'
+    scope: 'user-read-email user-read-private user-top-read'
   });
 
   res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
@@ -179,6 +179,16 @@ app.get('/auth/spotify/callback', async (req, res) => {
       displayName: profile.display_name || null,
       email: profile.email || null
     });
+
+    // store tokens (if present)
+    if (tokenResponse.access_token) {
+      const expiresIn = tokenResponse.expires_in || 3600;
+      const sessObj = sessions.get(sessionId);
+      sessObj.accessToken = tokenResponse.access_token;
+      sessObj.refreshToken = tokenResponse.refresh_token || sessObj.refreshToken || null;
+      sessObj.expiresAt = Date.now() + expiresIn * 1000; // ms
+      sessions.set(sessionId, sessObj);
+    }
 
     res.setHeader('Set-Cookie', `sid=${sessionId}; HttpOnly; Path=/`);
 
@@ -362,6 +372,81 @@ app.post('/api/posts/:postId/comments', async (req, res) => {
   }
 });
 
+// helper to refresh access token
+async function refreshAccessTokenIfNeeded(sess) {
+  if (!sess || !sess.refreshToken) return sess;
+  if (sess.expiresAt && Date.now() < sess.expiresAt - 30000) return sess; // still valid (30s buffer)
+
+  // refresh
+  try {
+    const resp = await postForm('https://accounts.spotify.com/api/token', {
+      'Authorization': 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')
+    }, {
+      grant_type: 'refresh_token',
+      refresh_token: sess.refreshToken
+    });
+    if (resp && resp.access_token) {
+      sess.accessToken = resp.access_token;
+      const expiresIn = resp.expires_in || 3600;
+      sess.expiresAt = Date.now() + expiresIn * 1000;
+      if (resp.refresh_token) sess.refreshToken = resp.refresh_token;
+    }
+  } catch (e) {
+    console.error('Failed to refresh Spotify token', e);
+    // leave session as-is; caller will handle failures.
+  }
+  return sess;
+}
+
+// helper to call Spotify API on behalf of session
+function spotifyGet(sess, path) {
+  return new Promise(async (resolve, reject) => {
+    await refreshAccessTokenIfNeeded(sess);
+    if (!sess || !sess.accessToken) return reject(new Error('Missing spotify access token'));
+    const options = { method: 'GET', headers: { 'Authorization': `Bearer ${sess.accessToken}` } };
+    https.get(`https://api.spotify.com/v1${path}`, options, (r) => {
+      let d = '';
+      r.on('data', (c) => d += c);
+      r.on('end', () => {
+        try { resolve(JSON.parse(d)); } catch (e) { reject(e); }
+      });
+    }).on('error', reject);
+  });
+}
+
+// GET /api/spotify/top -> returns top artists, top tracks and aggregated genres
+app.get('/api/spotify/top', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const artists = await spotifyGet(sess, '/me/top/artists?limit=12&time_range=short_term');
+    const tracks = await spotifyGet(sess, '/me/top/tracks?limit=12&time_range=short_term');
+
+    // aggregate genres from artists
+    const genreCounts = {};
+    if (artists && Array.isArray(artists.items)) {
+      for (const a of artists.items) {
+        if (!a.genres) continue;
+        for (const g of a.genres) {
+          genreCounts[g] = (genreCounts[g] || 0) + 1;
+        }
+      }
+    }
+    const genres = Object.entries(genreCounts)
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,10)
+      .map(([name,count])=>({ name, count }));
+
+    res.json({
+      artists: (artists && artists.items) || [],
+      tracks: (tracks && tracks.items) || [],
+      genres
+    });
+  } catch (err) {
+    console.error('GET /api/spotify/top error', err);
+    res.status(500).json({ error: 'Failed to fetch spotify top data' });
+  }
+});
 
 app.listen(port, hostname, () => {
   console.log(`Listening at: http://${hostname}:${port}`);
