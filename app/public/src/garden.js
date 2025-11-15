@@ -1,10 +1,21 @@
 
-import * as THREE from 'https://unpkg.com/three@latest/build/three.module.js';
-import { OrbitControls } from 'https://unpkg.com/three@latest/examples/jsm/controls/OrbitControls.js?module';
-import { SimplexNoise } from 'https://unpkg.com/three@latest/examples/jsm/math/SimplexNoise.js';
+import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js?module';
+import { SimplexNoise } from 'https://unpkg.com/three/examples/jsm/math/SimplexNoise.js';
 import { EffectComposer } from 'https://unpkg.com/three/examples/jsm/postprocessing/EffectComposer.js?module';
 import { RenderPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js?module';
 import { UnrealBloomPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/UnrealBloomPass.js?module';
+
+const audio = {
+  "acousticness": 1, 
+  "danceability": 1, 
+  "energy": 0.5, 
+  "instrumentalness": 1, 
+  "liveness": 1, 
+  "loudness": 0.5,
+  "tempo": 1, 
+  "valence": 1
+}
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -20,9 +31,9 @@ renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls( camera, renderer.domElement );
-controls.maxDistance = 100;
-controls.minDistance = 50;
-controls.maxPolarAngle = Math.PI/2.2;
+// controls.maxDistance = 100;
+// controls.minDistance = 50;
+// controls.maxPolarAngle = Math.PI/2.2;
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.update();
@@ -53,6 +64,7 @@ scene.add(sunLight);
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.85);
+
 composer.addPass(bloom);
 
 // scene.fog = new THREE.Fog(0x87ceeb, 12, 225);
@@ -72,15 +84,15 @@ function generateIsland(loudness, energy) {
     const y = vertices[i + 1];
 
     const dist = Math.sqrt(x * x + y * y);
-    const maxDist = size * 0.3; // loudness
+    const maxDist = size * 0.5 * loudness; // loudness
     const normDist = dist / maxDist;
 
     const edgeFalloff = Math.pow(Math.max(0, 1 - Math.pow(normDist, 2.2)), 1.2);
     const centerFalloff = 1.0 - Math.pow(normDist, 2.5);
 
     let height = 0;
-    let amplitude = 1.0; // energy?
-    let frequency = 0.015; // energy? lower = flatter
+    let amplitude = 1.0;
+    let frequency = 0.015;
 
     for (let octave = 0; octave < 5; octave++) {
       height += noise.noise(x * frequency, y * frequency) * amplitude;
@@ -90,7 +102,7 @@ function generateIsland(loudness, energy) {
 
     // scale overall height by edgeFalloff for island taper
     // scale noise amplitude by centerFalloff for smoother center
-    height = height * edgeFalloff * 15 * centerFalloff; // flatter - lower the constant
+    height = height * edgeFalloff * 30 * energy * centerFalloff; // energy
 
     // sharper peaks - add a nonlinear boost like height = Math.pow(height, 1.3) after computing.
 
@@ -135,7 +147,7 @@ function generateIsland(loudness, energy) {
   return mesh;
 }
 
-const island = generateIsland();
+const island = generateIsland(0.5, 0.5);
 scene.add(island);
 
 // ocean controlled by danceability
@@ -181,75 +193,143 @@ const waveParams = {
   heightY: 0.5,
 };
 
-// generate trees/foliage
-const treeGeometry = new THREE.ConeGeometry( 1, 2.5, 3 );
-const treeMaterial = new THREE.MeshStandardMaterial( { 
-  color: 0x2E6F40,
-  flatShading: true,
-  roughness: 0.8,
-  metalness: 0.3,
-} );
+// generate trees/foliage, density based on instrumentalness
+const treeGeometry = new THREE.ConeGeometry(0.8, 2.5, 3);
+const treeBaseColor = new THREE.Color(0x2E6F40);
+const positions = island.geometry.attributes.position.array;
+function addTrees() {
+  for (let i = 0; i < positions.length; i += 3) {
+    let instrumentalness = 1;
+    if (Math.random() > 0.2 * instrumentalness) continue; // instrumentalness/acoustiness ?
 
+    const x = positions[i];
+    const y = positions[i + 1];
+    const z = positions[i + 2];
 
+    if (z < 1 || z >= 6) continue;
 
-function createGrassBundle() {
-  const bundle = new THREE.Group();
-  const bladeCount = 10; // number of blades per patch
+    const treeColor = treeBaseColor.clone();
+    treeColor.offsetHSL(
+      (Math.random() - 0.5) * 0.05,
+      0,
+      (Math.random() - 0.5) * 0.1
+    );
 
-  const bladeGeometry = new THREE.PlaneGeometry(0.05, 0.4);
-  const bladeMaterial = new THREE.MeshToonMaterial({
-    color: 0x3fa34d,
-    side: THREE.DoubleSide,
-  });
+    const treeMaterial = new THREE.MeshStandardMaterial({
+      color: treeColor,
+      flatShading: true,
+      roughness: 0.6,
+      metalness: 0.3,
+    });
 
-  for (let i = 0; i < bladeCount; i++) {
-    const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+    const tree = new THREE.Mesh(treeGeometry, treeMaterial); // vary size?
+    tree.position.set(x, y, z + 1);
+    tree.rotation.x = Math.PI / 2;
+    tree.rotation.y = Math.random() * Math.PI * 2;
+    tree.castShadow = true;
+    tree.receiveShadow = true;
 
-    // random offset within the patch
-    blade.position.x = (Math.random() - 0.5) * 0.2;
-    blade.position.z = (Math.random() - 0.5) * 0.2;
-
-    // random tilt and rotation
-    blade.rotation.y = Math.random() * Math.PI;
-    // blade.rotation.x = (Math.random() - 0.3) * 0.1;
-
-    blade.rotation.x = -Math.PI/2;
-
-    // varied height
-    blade.scale.y = 0.8 + Math.random() * 0.5;
-
-    bundle.add(blade);
+    island.add(tree);
   }
-
-  return bundle;
 }
 
-const positions = island.geometry.attributes.position.array;
+addTrees();
+
+// liveness - fireflies, particles, birds
+
+function getFirefly() {
+  const hue = 0.6 + Math.random() * 0.2;
+  // const color = new THREE.Color().setHSL(hue, 1, 0.6);
+  const color = new THREE.Color(0xeabc3a);
+  const geo = new THREE.SphereGeometry(0.05, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.8,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  
+  const mesh = new THREE.Mesh(geo, mat);
+
+  const dir = new THREE.Vector3(
+    (Math.random() - 0.5) * 2,
+    0,
+    (Math.random() - 0.5) * 2
+  ).normalize();
+
+  mesh.userData = {
+    basePos: mesh.position.clone(),
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.5 + Math.random(),
+    driftDir: dir,
+    driftSpeed: 0.05 + Math.random() * 0.05, // slow wander
+  };
+
+  return mesh;
+}
 
 for (let i = 0; i < positions.length; i += 3) {
-
-  if ((Math.random() * 100) > 10) continue; // spread out
+  let liveness = 1;
+  if (Math.random() > 0.2 * liveness) continue;
 
   const x = positions[i];
   const y = positions[i + 1];
   const z = positions[i + 2];
 
-  if (z < 1 || z >= 6) continue; // trees go lower?
+  if (z < 1 || z > 10) continue;
 
-  const tree = new THREE.Mesh(treeGeometry, treeMaterial);
-  tree.position.set(x, y, z+1);
-
-  // const grass = createGrassBundle();
-  // grass.position.set(x, y, z);
-
-  tree.rotation.x = Math.PI/2;
-  tree.castShadow = true;
-  tree.receiveShadow = true;
-
-  island.add(tree);
+  let ff = getFirefly();
+  ff.position.set(x, y, z + 0.5);
+  ff.userData.basePos = ff.position.clone();
+  island.add(ff);
 }
 
-// liveness - fireflies, particles, birds
+const clock = new THREE.Clock();
+const tmpQuat = new THREE.Quaternion();
+const islandUp = new THREE.Vector3();
+
+function animateFireflies() {
+  const t = clock.getElapsedTime();
+
+  island.getWorldQuaternion(tmpQuat);
+  islandUp.set(0, 1, 0).applyQuaternion(tmpQuat);
+
+  island.traverse(obj => {
+    if (!obj.isMesh || !obj.userData.basePos) return;
+    const { basePos, phase, speed, driftDir, driftSpeed } = obj.userData;
+
+    // vertical flutter along island's up vector
+    const flutter = Math.sin(t * speed + phase) * 0.1;
+
+    // horizontal wandering offset (small circle or figure-8 pattern)
+    const drift = Math.sin(t * driftSpeed + phase) * 0.2;
+    const side = Math.cos(t * driftSpeed + phase) * 0.2;
+
+    // Create a horizontal plane perpendicular to island's up vector
+    // Project driftDir onto this plane to get a proper horizontal direction
+    const horizontalDir = driftDir.clone().sub(
+      islandUp.clone().multiplyScalar(driftDir.dot(islandUp))
+    ).normalize();
+    
+    // Create perpendicular horizontal vector
+    const perpDir = new THREE.Vector3().crossVectors(islandUp, horizontalDir).normalize();
+
+    // combine all offsets
+    obj.position.copy(basePos)
+      .addScaledVector(islandUp, flutter)
+      .addScaledVector(horizontalDir, drift)
+      .addScaledVector(perpDir, side);
+
+    // pulse brightness and scale
+    const pulse = 0.5 + 0.5 * Math.sin(t * 2.0 + phase);
+    obj.material.opacity = 0.5 + 0.5 * pulse;
+    obj.scale.setScalar(1.0 + 0.3 * pulse);
+  });
+}
+
+// weather
+
 
 function animate(time) {
   const t = time * 0.001;
@@ -261,6 +341,7 @@ function animate(time) {
   // renderer.render(scene, camera);
   composer.render();
   requestAnimationFrame(animate);
+  animateFireflies();
 }
 
 animate(0);

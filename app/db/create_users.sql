@@ -32,3 +32,15 @@ CREATE TABLE IF NOT EXISTS comments (
   content TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- CREATE TABLE IF NOT EXISTS tracks (
+--   // spotify track id
+--   // reccobeats track id
+--   // track info/features
+-- );
+
+-- CREATE TABLE IF NOT EXISTS user_tracks (
+--   // user id
+--   /track id
+-- );
+
