@@ -6,15 +6,18 @@ import { EffectComposer } from 'https://unpkg.com/three/examples/jsm/postprocess
 import { RenderPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js?module';
 import { UnrealBloomPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/UnrealBloomPass.js?module';
 
-const audio = {
-  "acousticness": 1, 
-  "danceability": 1, 
-  "energy": 0.5, 
-  "instrumentalness": 1, 
-  "liveness": 1, 
-  "loudness": 0.5,
-  "tempo": 1, 
-  "valence": 1
+const audio = await initializeUserTracks();
+console.log(audio);
+
+const feats = {
+  acousticness: 0.32965413636363644,
+  danceability: 0.5708636363636365,
+  energy: 0.565090909090909,
+  instrumentalness: 0.0003148740909090909,
+  liveness: 0.16130000000000003,
+  loudness: -8.615727272727272,
+  tempo: 128.14995454545453,
+  valence: 0.4056954545454545
 }
 
 const scene = new THREE.Scene();

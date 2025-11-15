@@ -593,6 +593,239 @@ app.get('/api/spotify/top', async (req, res) => {
   }
 });
 
+// GET /api/spotify/tracks -> returns last 50 saved tracks
+app.get('/api/spotify/tracks', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const tracks = await spotifyGet(sess, '/me/top/tracks?limit=50');
+
+    res.json({
+      tracks: (tracks && tracks.items) || []
+    });
+  } catch (err) {
+    console.error('GET /api/spotify/top error', err);
+    res.status(500).json({ error: 'Failed to fetch user spotify track data' });
+  }
+});
+
+// GET /api/recco/tracks -> returns last 40 saved tracks, needed to get the reccobeats specific id
+app.get('/api/recco/tracks', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  
+  try {
+    // console.log('Step 1: Fetching Spotify tracks...');
+    const spotifyData = await spotifyGet(sess, '/me/top/tracks?limit=50');
+    const spotifyTracks = (spotifyData && spotifyData.items) || [];
+    
+    // console.log(`Step 2: Got ${spotifyTracks.length} Spotify tracks`);
+    
+    if (spotifyTracks.length === 0) {
+      return res.json({ tracks: [] });
+    }
+    
+    const trackIds = [...new Set(spotifyTracks.map(track => track.id))].slice(0, 40);
+    
+    // console.log(`Step 3: Using ${trackIds.length} unique track IDs (max 40)`);
+    
+    const reccobeatsUrl = 'https://api.reccobeats.com/v1/track?' + 
+      trackIds.map(id => `ids=${id}`).join('&');
+    
+    // console.log('Step 4: Fetching from Reccobeats...');
+    
+    const reccoResponse = await fetch(reccobeatsUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      redirect: 'follow'
+    });
+    
+    // console.log('Step 5: Reccobeats response status:', reccoResponse.status);
+    
+    if (!reccoResponse.ok) {
+      const errorText = await reccoResponse.text();
+      console.error('Reccobeats error response:', errorText);
+      throw new Error(`Reccobeats API error: ${reccoResponse.status} - ${errorText}`);
+    }
+    
+    const reccoData = await reccoResponse.json();
+    // console.log('Step 6: Successfully got Reccobeats data');
+    
+    res.json({
+      tracks: reccoData.content || []
+    });
+  } catch (err) {
+    console.error('GET /api/recco/tracks error:', err);
+    res.status(500).json({ error: 'Failed to fetch reccobeats track data', details: err.message });
+  }
+});
+
+app.get('/api/recco/tracks/audio-features/batch', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  
+  const { ids } = req.query;
+  
+  if (!ids) {
+    return res.status(400).json({ error: 'Track IDs are required' });
+  }
+  
+  try {
+    const trackIds = ids.split(',').filter(id => id.trim());
+    
+    if (trackIds.length === 0) {
+      return res.status(400).json({ error: 'No valid track IDs provided' });
+    }
+    
+    const audioFeaturesPromises = trackIds.map(async (id) => {
+      try {
+        const reccobeatsUrl = `https://api.reccobeats.com/v1/track/${id}/audio-features`;
+        const response = await fetch(reccobeatsUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+          console.warn(`Failed to fetch audio features for track ${id}: ${response.status}`);
+          return null;
+        }
+        
+        return await response.json();
+      } catch (err) {
+        console.error(`Error fetching audio features for track ${id}:`, err);
+        return null;
+      }
+    });
+    
+    const audioFeaturesResults = await Promise.all(audioFeaturesPromises);
+    const audioFeatures = audioFeaturesResults.filter(result => result !== null);
+    
+    res.json({
+      audioFeatures,
+      total: audioFeatures.length,
+      requested: trackIds.length
+    });
+  } catch (err) {
+    console.error('GET /api/recco/tracks/audio-features/batch error', err);
+    res.status(500).json({ error: 'Failed to fetch batch audio features' });
+  }
+});
+
+app.get('/api/user/tracks/needs-refresh', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  
+  try {
+    const result = await pool.query(
+      'SELECT tracks_last_fetched_at FROM users WHERE spotify_id = $1',
+      [sess.spotifyId]
+    );
+    
+    const lastFetch = result.rows[0]?.tracks_last_fetched_at;
+    
+    if (!lastFetch) {
+      return res.json({ needsRefresh: true });
+    }
+    
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const needsRefresh = new Date(lastFetch) < oneWeekAgo;
+    
+    res.json({ needsRefresh });
+  } catch (err) {
+    console.error('Error checking refresh status:', err);
+    res.status(500).json({ error: 'Failed to check refresh status' });
+  }
+});
+
+app.post('/api/user/tracks/save', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  
+  const { tracks, audioFeatures } = req.body;
+  
+  try {
+    await pool.query('BEGIN');
+    
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      const features = audioFeatures.find(f => f.id === track.id);
+      
+      let spotifyId = track.id;
+      if (track.href && track.href.includes('spotify.com/track/')) {
+        const parts = track.href.split('/track/');
+        if (parts.length > 1) {
+          spotifyId = parts[1].split('?')[0];
+        }
+      }
+      
+      const reccoId = track.id;
+      
+      await pool.query(
+        `INSERT INTO tracks (spotify_track_id, recco_track_id, track_info, audio_features)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (spotify_track_id) 
+         DO UPDATE SET 
+           recco_track_id = $2,
+           track_info = $3, 
+           audio_features = $4`,
+        [spotifyId, reccoId, JSON.stringify(track), JSON.stringify(features || {})]
+      );
+      
+      await pool.query(
+        `INSERT INTO user_tracks (user_id, spotify_track_id, rank)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, spotify_track_id)
+         DO UPDATE SET rank = $3`,
+        [sess.spotifyId, spotifyId, i + 1]
+      );
+    }
+    
+    await pool.query(
+      'UPDATE users SET tracks_last_fetched_at = NOW() WHERE spotify_id = $1',
+      [sess.spotifyId]
+    );
+    
+    await pool.query('COMMIT');
+    res.json({ success: true, tracksSaved: tracks.length });
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Error saving tracks:', err);
+    res.status(500).json({ error: 'Failed to save tracks' });
+  }
+});
+
+// Get tracks from database
+app.get('/api/user/tracks/from-db', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
+  
+  try {
+    const result = await pool.query(
+      `SELECT t.track_info, t.audio_features, ut.rank
+       FROM user_tracks ut
+       JOIN tracks t ON ut.spotify_track_id = t.spotify_track_id
+       WHERE ut.user_id = $1
+       ORDER BY ut.rank ASC`,
+      [sess.spotifyId]
+    );
+    
+    res.json({
+      tracks: result.rows.map(row => row.track_info),
+      audioFeatures: result.rows.map(row => row.audio_features)
+    });
+  } catch (err) {
+    console.error('Error fetching tracks from DB:', err);
+    res.status(500).json({ error: 'Failed to fetch tracks' });
+  }
+});
+
 app.listen(port, hostname, () => {
   console.log(`Listening at: http://${hostname}:${port}`);
 });

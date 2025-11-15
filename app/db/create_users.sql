@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT,
   profile_pic_url TEXT,
   bio TEXT,
+  tracks_last_fetched_at TIMESTAMPTZ,     -- Track when user's tracks were last fetched
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -35,14 +36,28 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- CREATE TABLE IF NOT EXISTS tracks (
---   // spotify track id
---   // reccobeats track id
---   // track info/features
--- );
+CREATE TABLE IF NOT EXISTS tracks (
+  id SERIAL PRIMARY KEY,
+  spotify_track_id VARCHAR(255) UNIQUE NOT NULL,
+  recco_track_id VARCHAR(255) UNIQUE NOT NULL,
+  track_info JSONB NOT NULL,
+  audio_features JSONB,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
--- CREATE TABLE IF NOT EXISTS user_tracks (
---   // user id
---   /track id
--- );
+CREATE TABLE IF NOT EXISTS user_tracks (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(255) NOT NULL,
+  spotify_track_id VARCHAR(255) REFERENCES tracks(spotify_track_id) ON DELETE CASCADE,
+  rank INTEGER,
+  added_at TIMESTAMPTZ DEFAULT now(),
+  last_fetched_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, spotify_track_id)
+);
 
+CREATE INDEX idx_tracks_spotify_id ON tracks(spotify_track_id);
+CREATE INDEX idx_tracks_recco_id ON tracks(recco_track_id);
+CREATE INDEX idx_track_info ON tracks USING GIN(track_info);
+CREATE INDEX idx_audio_features ON tracks USING GIN(audio_features);
+CREATE INDEX idx_user_tracks_user_id ON user_tracks(user_id);
