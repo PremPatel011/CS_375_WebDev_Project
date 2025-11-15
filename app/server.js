@@ -615,11 +615,8 @@ app.get('/api/recco/tracks', async (req, res) => {
   if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
   
   try {
-    // console.log('Step 1: Fetching Spotify tracks...');
     const spotifyData = await spotifyGet(sess, '/me/top/tracks?limit=50');
     const spotifyTracks = (spotifyData && spotifyData.items) || [];
-    
-    // console.log(`Step 2: Got ${spotifyTracks.length} Spotify tracks`);
     
     if (spotifyTracks.length === 0) {
       return res.json({ tracks: [] });
@@ -627,12 +624,8 @@ app.get('/api/recco/tracks', async (req, res) => {
     
     const trackIds = [...new Set(spotifyTracks.map(track => track.id))].slice(0, 40);
     
-    // console.log(`Step 3: Using ${trackIds.length} unique track IDs (max 40)`);
-    
     const reccobeatsUrl = 'https://api.reccobeats.com/v1/track?' + 
       trackIds.map(id => `ids=${id}`).join('&');
-    
-    // console.log('Step 4: Fetching from Reccobeats...');
     
     const reccoResponse = await fetch(reccobeatsUrl, {
       method: 'GET',
@@ -642,8 +635,6 @@ app.get('/api/recco/tracks', async (req, res) => {
       redirect: 'follow'
     });
     
-    // console.log('Step 5: Reccobeats response status:', reccoResponse.status);
-    
     if (!reccoResponse.ok) {
       const errorText = await reccoResponse.text();
       console.error('Reccobeats error response:', errorText);
@@ -651,7 +642,6 @@ app.get('/api/recco/tracks', async (req, res) => {
     }
     
     const reccoData = await reccoResponse.json();
-    // console.log('Step 6: Successfully got Reccobeats data');
     
     res.json({
       tracks: reccoData.content || []

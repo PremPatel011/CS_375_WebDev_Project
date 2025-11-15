@@ -20,11 +20,8 @@ async function getUserTrackFeatures() {
     const refreshCheck = await apiGet('/api/user/tracks/needs-refresh');
     
     if (!refreshCheck.needsRefresh) {
-      console.log('Using cached track data');
       return await apiGet('/api/user/tracks/from-db');
     }
-    
-    console.log('Fetching fresh track data from APIs...');
     
     const reccoData = await apiGet('/api/recco/tracks');
     
@@ -118,7 +115,6 @@ async function getAverageAudioFeatures() {
 
 async function initializeUserTracks() {
   try {
-    // console.log('Initializing user tracks...');
     await getUserTrackFeatures();
     
     const audio = await getAverageAudioFeatures();
