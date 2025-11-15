@@ -29,10 +29,13 @@
             }
         },
         {
-            "table_name": "friends",
+            "table_name": "friendships",
             "data": {
-                "user_id": "string",
-                "friend_id": "string"
+                "id": "serial",
+                "user_a_id": "integer",
+                "user_b_id": "integer",
+                "created_by": "integer",
+                "created_at": "TIMESTAMPTZ"
             }
         },
         {

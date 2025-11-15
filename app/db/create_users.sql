@@ -10,12 +10,14 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS friends (
+CREATE TABLE IF NOT EXISTS friendships (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  friend_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_a_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_b_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(user_id, friend_id)
+  CHECK (user_a_id < user_b_id),
+  UNIQUE (user_a_id, user_b_id)
 );
 
 CREATE TABLE IF NOT EXISTS posts (

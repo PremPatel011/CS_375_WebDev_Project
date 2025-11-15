@@ -265,6 +265,97 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+// Create a friendship link between two users
+app.post('/api/friendships', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const parseId = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = Number(value);
+    return Number.isInteger(parsed) ? parsed : null;
+  };
+
+  let userId = parseId(req.body && req.body.userId);
+  let friendId = parseId(req.body && req.body.friendId);
+
+  if (!userId){
+    userId = sess.userId
+  };
+  if (userId !== sess.userId) {
+    return res.status(403).json({ error: 'Cannot create friendships for another user' });
+  }
+
+  const friendUsername = req.body && typeof req.body.friendUsername === 'string'
+    ? req.body.friendUsername.trim()
+    : null;
+  const friendSpotifyId = req.body && typeof req.body.friendSpotifyId === 'string'
+    ? req.body.friendSpotifyId.trim()
+    : null;
+
+  try {
+    if (!friendId && (friendUsername || friendSpotifyId)) {
+      const clauses = [];
+      const values = [];
+      let idx = 1;
+      if (friendUsername) {
+        clauses.push(`LOWER(username) = LOWER($${idx})`);
+        values.push(friendUsername);
+        idx++;
+      }
+      if (friendSpotifyId) {
+        clauses.push(`spotify_id = $${idx}`);
+        values.push(friendSpotifyId);
+        idx++;
+      }
+      const lookupSql = `SELECT id FROM users WHERE ${clauses.join(' OR ')} LIMIT 1`;
+      const userLookup = await pool.query(lookupSql, values);
+      if (userLookup.rowCount === 0) {
+        return res.status(404).json({ error: 'Friend user not found' });
+      }
+      friendId = userLookup.rows[0].id;
+    }
+
+    if (!friendId) {
+      return res.status(400).json({ error: 'friendId or a friend identifier is required' });
+    }
+
+    if (friendId === userId) {
+      return res.status(400).json({ error: 'Cannot friend yourself' });
+    }
+
+    const friendExists = await pool.query('SELECT id FROM users WHERE id = $1', [friendId]);
+    if (friendExists.rowCount === 0) {
+      return res.status(404).json({ error: 'Friend user not found' });
+    }
+
+    const [userA, userB] = userId < friendId ? [userId, friendId] : [friendId, userId];
+    const insertSql = `
+      INSERT INTO friendships (user_a_id, user_b_id, created_by)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_a_id, user_b_id) DO NOTHING
+      RETURNING id, user_a_id, user_b_id, created_at
+    `;
+    const insertResult = await pool.query(insertSql, [userA, userB, userId]);
+
+    if (insertResult.rowCount === 0) {
+      return res.status(200).json({ status: 'exists', message: 'Friendship already recorded' });
+    }
+
+    const friendship = insertResult.rows[0];
+    const responsePayload = {
+      id: friendship.id,
+      user_a_id: friendship.user_a_id,
+      user_b_id: friendship.user_b_id,
+      created_at: friendship.created_at
+    };
+    res.status(201).json(responsePayload);
+  } catch (err) {
+    console.error('POST /api/friendships error', err);
+    res.status(500).json({ error: 'Failed to create friendship' });
+  }
+});
+
 // Add avatar upload endpoint
 app.post('/api/me/avatar', async (req, res) => {
   const sess = req.session;
