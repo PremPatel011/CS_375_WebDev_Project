@@ -68,7 +68,7 @@ async function saveProfile() {
   };
   try {
     await apiPut('/api/me', body);
-    window.location.href = '/garden.html';
+    window.location.href = '/index.html';
     alert('Profile saved');
     
   } catch (err) {
