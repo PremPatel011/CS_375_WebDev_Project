@@ -10,7 +10,7 @@ const audio1 = await initializeUserTracks();
 console.log(audio1);
 
 const audio = {
-  acousticness: 0.32965413636363644,
+  acousticness: 0.32965413636363644, // amount of trees
   danceability: 0.5708636363636365, // waves
   energy: 0.565090909090909, // terrain height
   instrumentalness: 0.0003148740909090909,
