@@ -41,6 +41,7 @@ controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.update();
 
+let skyColor = new THREE.Color();
 scene.background = new THREE.Color(0x65C1BC);
 
 const envLight = new THREE.HemisphereLight(0x88ccff, 0x226622, 0.6);
@@ -73,6 +74,16 @@ composer.addPass(bloom);
 // scene.fog = new THREE.Fog(0x87ceeb, 12, 225);
 
 // island scale based on loudness, island mountain heights based on energy or terrain based on energy in genereal
+
+let islandColors = {
+    sand: new THREE.Color(0xCBBD93),
+    grass: new THREE.Color(0x7EB26D),
+    grass2: new THREE.Color(0x568248),
+    rock: new THREE.Color(0x6B4F36),
+    mountain: new THREE.Color(0x4B3A2B),
+    snow: new THREE.Color(0xF3F6FB)
+  }
+
 function generateIsland(loudness, energy) {
   const size = 200;
   const segments = 128;
@@ -116,17 +127,17 @@ function generateIsland(loudness, energy) {
 
     const color = new THREE.Color();
     if (height < 0.5) {
-      color.setHex(0xCBBD93); // sand
+      color = islandColors.sand;
     } else if (height < 4) {
-      color.setHex(0x7EB26D); // grass
+      color = islandColors.grass;
     } else if (height < 8) {
-      color.setHex(0x568248); // darker greens
+      color = islandColors.grass2;
     } else if (height < 12) {
-      color.setHex(0x6B4F36); // rocky 
+      color = islandColors.rock;
     } else if (height < 16) {
-      color.setHex(0x4B3A2B); // mountain
+      color = islandColors.mountain;
     } else {
-      color.setHex(0xF3F6FB); // snow
+      color = islandColors.snow;
     }
 
     colors.push(color.r, color.g, color.b);
@@ -238,13 +249,13 @@ function addTrees() {
 
 addTrees();
 
-// liveness - fireflies, particles, birds
+// liveness - fireflies, particles, birds? SCRAP
 
 function getFirefly() {
   const hue = 0.6 + Math.random() * 0.2;
   // const color = new THREE.Color().setHSL(hue, 1, 0.6);
   const color = new THREE.Color(0xeabc3a);
-  const geo = new THREE.SphereGeometry(0.05, 8, 8);
+  const geo = new THREE.SphereGeometry(0.02, 8, 8);
   const mat = new THREE.MeshBasicMaterial({
     color,
     transparent: true,
