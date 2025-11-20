@@ -6,19 +6,71 @@ import { EffectComposer } from 'https://unpkg.com/three/examples/jsm/postprocess
 import { RenderPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js?module';
 import { UnrealBloomPass } from 'https://unpkg.com/three/examples/jsm/postprocessing/UnrealBloomPass.js?module';
 
-const audio = await initializeUserTracks();
-console.log(audio);
+const audio1 = await initializeUserTracks();
+console.log(audio1);
 
-const feats = {
+const audio = {
   acousticness: 0.32965413636363644,
-  danceability: 0.5708636363636365,
-  energy: 0.565090909090909,
+  danceability: 0.5708636363636365, // waves
+  energy: 0.565090909090909, // terrain height
   instrumentalness: 0.0003148740909090909,
   liveness: 0.16130000000000003,
-  loudness: -8.615727272727272,
+  loudness: -8.615727272727272, // island size
   tempo: 128.14995454545453,
-  valence: 0.4056954545454545
+  valence: 0.4056954545454545 // color pallete, weather?
 }
+
+let islandColors = {
+  sky: new THREE.Color(0x65C1BC),
+  sand: new THREE.Color(0xCBBD93),
+  grass: new THREE.Color(0x7EB26D),
+  grass2: new THREE.Color(0x568248),
+  rock: new THREE.Color(0x6B4F36),
+  mountain: new THREE.Color(0x4B3A2B),
+  snow: new THREE.Color(0xF3F6FB),
+  tree: new THREE.Color(0x2E6F40),
+  ocean: new THREE.Color(0x3a9bd4)
+}
+
+function updateColors(valence) {
+  const skyCold = new THREE.Color(0x7A8B9C);     // cool gray-blue
+  const skyWarm = new THREE.Color(0xFFB584);     // warm peachy orange
+  islandColors.sky = skyCold.clone().lerp(skyWarm, valence);
+  
+  const sandCold = new THREE.Color(0xA0A8B0);    // cool gray-blue sand
+  const sandWarm = new THREE.Color(0xE8C170);    // warm golden sand
+  islandColors.sand = sandCold.clone().lerp(sandWarm, valence);
+  
+  const grassCold = new THREE.Color(0x5B8B7D);   // teal-green
+  const grassWarm = new THREE.Color(0xA8C256);   // warm yellow-green
+  islandColors.grass = grassCold.clone().lerp(grassWarm, valence);
+  
+  const grass2Cold = new THREE.Color(0x4A6B5B);  // cool blue-green
+  const grass2Warm = new THREE.Color(0x7B8E3D);  // warm olive
+  islandColors.grass2 = grass2Cold.clone().lerp(grass2Warm, valence);
+  
+  const rockCold = new THREE.Color(0x6B7B8C);    // slate gray
+  const rockWarm = new THREE.Color(0xA0653F);    // terracotta
+  islandColors.rock = rockCold.clone().lerp(rockWarm, valence);
+  
+  const mountainCold = new THREE.Color(0x3D4A5C); // dark blue-gray
+  const mountainWarm = new THREE.Color(0x5C3D2E);  // dark warm brown
+  islandColors.mountain = mountainCold.clone().lerp(mountainWarm, valence);
+  
+  const snowCold = new THREE.Color(0xD5E5F0);    // icy blue-white
+  const snowWarm = new THREE.Color(0xFFEBD9);    // warm peachy white
+  islandColors.snow = snowCold.clone().lerp(snowWarm, valence);
+  
+  const treeCold = new THREE.Color(0x2B5F5F);    // cool blue-green
+  const treeWarm = new THREE.Color(0x6B8E23);    // warm amber-green
+  islandColors.tree = treeCold.clone().lerp(treeWarm, valence);
+  
+  const oceanCold = new THREE.Color(0x2B5876);   // cool deep blue
+  const oceanWarm = new THREE.Color(0x48C9B0);   // warm turquoise
+  islandColors.ocean = oceanCold.clone().lerp(oceanWarm, valence);
+}
+
+updateColors(audio.valence);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -33,26 +85,6 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
 
-// Top-left profile avatar: fetch /api/me and show if available
-async function loadTopAvatar() {
-  try {
-    const res = await fetch('/api/me', { credentials: 'same-origin' });
-    if (!res.ok) return; // not authenticated or no avatar
-    const p = await res.json();
-    const img = document.getElementById('top_avatar');
-    if (!img) return;
-    if (p.profile_pic_url) {
-      img.src = p.profile_pic_url;
-      img.hidden = false;
-    } else {
-      img.hidden = true;
-    }
-  } catch (e) {
-    console.error('loadTopAvatar error', e);
-  }
-}
-loadTopAvatar();
-
 const controls = new OrbitControls( camera, renderer.domElement );
 // controls.maxDistance = 100;
 // controls.minDistance = 50;
@@ -61,8 +93,7 @@ controls.target.set(0, 0, 0);
 controls.enableDamping = true;
 controls.update();
 
-let skyColor = new THREE.Color();
-scene.background = new THREE.Color(0x65C1BC);
+scene.background = new THREE.Color(islandColors.sky);
 
 const envLight = new THREE.HemisphereLight(0x88ccff, 0x226622, 0.6);
 scene.add(envLight);
@@ -95,16 +126,7 @@ composer.addPass(bloom);
 
 // island scale based on loudness, island mountain heights based on energy or terrain based on energy in genereal
 
-let islandColors = {
-    sand: new THREE.Color(0xCBBD93),
-    grass: new THREE.Color(0x7EB26D),
-    grass2: new THREE.Color(0x568248),
-    rock: new THREE.Color(0x6B4F36),
-    mountain: new THREE.Color(0x4B3A2B),
-    snow: new THREE.Color(0xF3F6FB)
-  }
-
-function generateIsland(loudness, energy) {
+function generateIsland() {
   const size = 200;
   const segments = 128;
   const noise = new SimplexNoise();
@@ -117,8 +139,10 @@ function generateIsland(loudness, energy) {
     const x = vertices[i];
     const y = vertices[i + 1];
 
+    let loudness = (audio.loudness + 60) / 60;
+
     const dist = Math.sqrt(x * x + y * y);
-    const maxDist = size * 0.5 * loudness; // loudness
+    const maxDist = size * 0.5 * loudness;
     const normDist = dist / maxDist;
 
     const edgeFalloff = Math.pow(Math.max(0, 1 - Math.pow(normDist, 2.2)), 1.2);
@@ -136,7 +160,7 @@ function generateIsland(loudness, energy) {
 
     // scale overall height by edgeFalloff for island taper
     // scale noise amplitude by centerFalloff for smoother center
-    height = height * edgeFalloff * 30 * energy * centerFalloff; // energy
+    height = height * edgeFalloff * 30 * audio.energy * centerFalloff;
 
     // sharper peaks - add a nonlinear boost like height = Math.pow(height, 1.3) after computing.
 
@@ -145,7 +169,7 @@ function generateIsland(loudness, energy) {
 
     vertices[i + 2] = height;
 
-    const color = new THREE.Color();
+    let color = new THREE.Color();
     if (height < 0.5) {
       color = islandColors.sand;
     } else if (height < 4) {
@@ -181,13 +205,13 @@ function generateIsland(loudness, energy) {
   return mesh;
 }
 
-const island = generateIsland(0.5, 0.5);
+const island = generateIsland();
 scene.add(island);
 
 // ocean controlled by danceability
 const oceanGeometry = new THREE.PlaneGeometry(200, 200, 32, 32);
 const oceanMaterial = new THREE.MeshStandardMaterial({ 
-                                  color: 0x3a9bd4, 
+                                  color: islandColors.ocean, 
                                   flatShading: true,
                                   roughness: 0.4,
                                   metalness: 0.6,
@@ -217,24 +241,45 @@ function updateWaves(geometry, time, params) {
   geometry.computeVertexNormals();
 }
 
+function updateWaveParamsFromDanceability(danceability) {
+  // Higher danceability = faster, choppier waves with more frequency
+  waveParams.freqX = 0.05 + (danceability * 0.15);     // 0.05 to 0.20
+  waveParams.freqY = 0.10 + (danceability * 0.20);     // 0.10 to 0.30
+  
+  waveParams.speedX = 0.5 + (danceability * 1.5);      // 0.5 to 2.0
+  waveParams.speedY = 0.4 + (danceability * 1.2);      // 0.4 to 1.6
+  
+  // Higher danceability = more wave height variation
+  waveParams.heightX = 0.5 + (danceability * 1.5);     // 0.5 to 2.0
+  waveParams.heightY = 0.3 + (danceability * 0.9);     // 0.3 to 1.2
+}
+
+
+
 // danceability
 const waveParams = {
-  freqX: 0.1,
-  speedX: 1.0,
-  heightX: 1.0,
-  freqY: 0.15, 
-  speedY: 0.8,
-  heightY: 0.5,
+  // freqX: 0.1,
+  // speedX: 1.0,
+  // heightX: 1.0,
+  // freqY: 0.15, 
+  // speedY: 0.8,
+  // heightY: 0.5,
+
+  freqX: 0.05 + (audio.danceability * 0.15),     // 0.05 to 0.20
+  freqY: 0.10 + (audio.danceability * 0.20),     // 0.10 to 0.30
+  speedX: 0.5 + (audio.danceability * 1.5),      // 0.5 to 2.0
+  speedY: 0.4 + (audio.danceability * 1.2),      // 0.4 to 1.6
+  heightX: 0.5 + (audio.danceability * 1.5),     // 0.5 to 2.0
+  heightY: 0.3 + (audio.danceability * 0.9)      // 0.3 to 1.2
 };
 
 // generate trees/foliage, density based on instrumentalness
 const treeGeometry = new THREE.ConeGeometry(0.8, 2.5, 3);
-const treeBaseColor = new THREE.Color(0x2E6F40);
+const treeBaseColor = islandColors.tree;
 const positions = island.geometry.attributes.position.array;
 function addTrees() {
   for (let i = 0; i < positions.length; i += 3) {
-    let instrumentalness = 1;
-    if (Math.random() > 0.2 * instrumentalness) continue; // instrumentalness/acoustiness ?
+    if (Math.random() > 0.3 * audio.acousticness) continue; // instrumentalness/acoustiness ?
 
     const x = positions[i];
     const y = positions[i + 1];
