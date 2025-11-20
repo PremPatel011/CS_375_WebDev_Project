@@ -1,3 +1,4 @@
+<!-- This page contains the users island -->
 <!DOCTYPE html>
 <html>
   <head>
@@ -5,13 +6,28 @@
     <meta name="viewport" 
       content="width=device-width, 
       initial-scale=1">
-    <title>Garden Home</title>
+    <title>Island Home</title>
     <style>
         body { margin: 0; }
+       /* top-left profile avatar */
+       #profile_link { position: fixed; top: 12px; left: 12px; z-index: 1200; display: block; }
+       #top_avatar {
+         width: 96px;
+         height: 96px;
+         border-radius: 50%;
+         object-fit: cover;
+         box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+         border: 2px solid #fff;
+         cursor: pointer;
+         display: block;
+       }
     </style>
   </head>
   <body>
-    <script type="module" src="/src/garden.js"></script>
+    <a id="profile_link" href="/Profile.html" title="Your profile">
+      <img id="top_avatar" src="" alt="" hidden>
+    </a>
+    <script type="module" src="/src/island.js"></script>
     <script src="/src/tracks.js"></script>
   </body>
 </html>

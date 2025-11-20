@@ -19,6 +19,15 @@ pool.connect().then(function () {
   console.log(`Connected to database ${env.database}`);
 });
 
+// Root route: send the garden (index) if authenticated, otherwise go to login
+app.get('/', (req, res) => {
+  const sess = req.session; // see `getSessionFromReq` in this file
+  if (sess && sess.userId) {
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  return res.redirect('/login.html');
+});
+
 app.use(express.static("public"));
 app.use(express.json({ limit: '8mb' }))
 
@@ -196,7 +205,7 @@ app.get('/auth/spotify/callback', async (req, res) => {
     res.setHeader('Set-Cookie', `sid=${sessionId}; HttpOnly; Path=/`);
 
     // redirect to main app page
-    res.redirect('/garden.html');
+    res.redirect('/index.html');
   } catch (err) {
     console.error('Spotify callback error', err);
     res.status(500).send('Spotify login failed');

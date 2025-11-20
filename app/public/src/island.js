@@ -33,6 +33,26 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
 
+// Top-left profile avatar: fetch /api/me and show if available
+async function loadTopAvatar() {
+  try {
+    const res = await fetch('/api/me', { credentials: 'same-origin' });
+    if (!res.ok) return; // not authenticated or no avatar
+    const p = await res.json();
+    const img = document.getElementById('top_avatar');
+    if (!img) return;
+    if (p.profile_pic_url) {
+      img.src = p.profile_pic_url;
+      img.hidden = false;
+    } else {
+      img.hidden = true;
+    }
+  } catch (e) {
+    console.error('loadTopAvatar error', e);
+  }
+}
+loadTopAvatar();
+
 const controls = new OrbitControls( camera, renderer.domElement );
 // controls.maxDistance = 100;
 // controls.minDistance = 50;
