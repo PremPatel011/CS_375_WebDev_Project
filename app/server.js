@@ -288,7 +288,7 @@ app.post('/api/friendships', async (req, res) => {
   let userId = parseId(req.body && req.body.userId);
   let friendId = parseId(req.body && req.body.friendId);
 
-  if (!userId){
+  if (!userId) {
     userId = sess.userId
   };
   if (userId !== sess.userId) {
@@ -380,7 +380,7 @@ app.post('/api/me/avatar', async (req, res) => {
 
   const mime = matches[1]; // e.g. image/png
   const base64 = matches[2];
-   
+
   const ext = mime.split('/')[1] === 'jpeg' ? 'jpg' : mime.split('/')[1];
   const buffer = Buffer.from(base64, 'base64');
 
@@ -431,6 +431,77 @@ app.post('/api/posts', async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('POST /api/posts error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get global feed (all posts from all users)
+app.get('/api/feed', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  const limit = parseInt(req.query.limit, 10) || 15;
+  const offset = parseInt(req.query.offset, 10) || 0;
+
+  try {
+    const postsResult = await pool.query(
+      `SELECT p.id, p.content, p.created_at, p.user_id,
+              u.username AS author_username,
+              u.display_name AS author_display_name,
+              u.profile_pic_url AS author_avatar_url
+       FROM posts p
+       JOIN users u ON p.user_id = u.id
+       ORDER BY p.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    const posts = postsResult.rows;
+    if (posts.length === 0) {
+      return res.json([]);
+    }
+
+    const postIds = posts.map((p) => p.id);
+    const commentsResult = await pool.query(
+      `SELECT c.id, c.post_id, c.content, c.created_at,
+              u.username AS author_username,
+              u.display_name AS author_display_name
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.post_id = ANY($1::int[])
+       ORDER BY c.created_at ASC`,
+      [postIds]
+    );
+
+    const commentsByPost = new Map();
+    for (const row of commentsResult.rows) {
+      if (!commentsByPost.has(row.post_id)) {
+        commentsByPost.set(row.post_id, []);
+      }
+      commentsByPost.get(row.post_id).push({
+        id: row.id,
+        content: row.content,
+        created_at: row.created_at,
+        author_username: row.author_username,
+        author_display_name: row.author_display_name
+      });
+    }
+
+    const withComments = posts.map((post) => ({
+      id: post.id,
+      content: post.content,
+      created_at: post.created_at,
+      author: {
+        username: post.author_username,
+        display_name: post.author_display_name,
+        avatar_url: post.author_avatar_url
+      },
+      comments: commentsByPost.get(post.id) || []
+    }));
+
+    res.json(withComments);
+  } catch (err) {
+    console.error('GET /api/feed error', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -587,9 +658,9 @@ app.get('/api/spotify/top', async (req, res) => {
       }
     }
     const genres = Object.entries(genreCounts)
-      .sort((a,b)=>b[1]-a[1])
-      .slice(0,10)
-      .map(([name,count])=>({ name, count }));
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, count }));
 
     res.json({
       artists: (artists && artists.items) || [],
@@ -622,20 +693,20 @@ app.get('/api/spotify/tracks', async (req, res) => {
 app.get('/api/recco/tracks', async (req, res) => {
   const sess = req.session;
   if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
-  
+
   try {
     const spotifyData = await spotifyGet(sess, '/me/top/tracks?limit=50');
     const spotifyTracks = (spotifyData && spotifyData.items) || [];
-    
+
     if (spotifyTracks.length === 0) {
       return res.json({ tracks: [] });
     }
-    
+
     const trackIds = [...new Set(spotifyTracks.map(track => track.id))].slice(0, 40);
-    
-    const reccobeatsUrl = 'https://api.reccobeats.com/v1/track?' + 
+
+    const reccobeatsUrl = 'https://api.reccobeats.com/v1/track?' +
       trackIds.map(id => `ids=${id}`).join('&');
-    
+
     const reccoResponse = await fetch(reccobeatsUrl, {
       method: 'GET',
       headers: {
@@ -643,15 +714,15 @@ app.get('/api/recco/tracks', async (req, res) => {
       },
       redirect: 'follow'
     });
-    
+
     if (!reccoResponse.ok) {
       const errorText = await reccoResponse.text();
       console.error('Reccobeats error response:', errorText);
       throw new Error(`Reccobeats API error: ${reccoResponse.status} - ${errorText}`);
     }
-    
+
     const reccoData = await reccoResponse.json();
-    
+
     res.json({
       tracks: reccoData.content || []
     });
@@ -664,20 +735,20 @@ app.get('/api/recco/tracks', async (req, res) => {
 app.get('/api/recco/tracks/audio-features/batch', async (req, res) => {
   const sess = req.session;
   if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
-  
+
   const { ids } = req.query;
-  
+
   if (!ids) {
     return res.status(400).json({ error: 'Track IDs are required' });
   }
-  
+
   try {
     const trackIds = ids.split(',').filter(id => id.trim());
-    
+
     if (trackIds.length === 0) {
       return res.status(400).json({ error: 'No valid track IDs provided' });
     }
-    
+
     const audioFeaturesPromises = trackIds.map(async (id) => {
       try {
         const reccobeatsUrl = `https://api.reccobeats.com/v1/track/${id}/audio-features`;
@@ -688,22 +759,22 @@ app.get('/api/recco/tracks/audio-features/batch', async (req, res) => {
           },
           redirect: 'follow'
         });
-        
+
         if (!response.ok) {
           console.warn(`Failed to fetch audio features for track ${id}: ${response.status}`);
           return null;
         }
-        
+
         return await response.json();
       } catch (err) {
         console.error(`Error fetching audio features for track ${id}:`, err);
         return null;
       }
     });
-    
+
     const audioFeaturesResults = await Promise.all(audioFeaturesPromises);
     const audioFeatures = audioFeaturesResults.filter(result => result !== null);
-    
+
     res.json({
       audioFeatures,
       total: audioFeatures.length,
@@ -718,24 +789,24 @@ app.get('/api/recco/tracks/audio-features/batch', async (req, res) => {
 app.get('/api/user/tracks/needs-refresh', async (req, res) => {
   const sess = req.session;
   if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
-  
+
   try {
     const result = await pool.query(
       'SELECT tracks_last_fetched_at FROM users WHERE spotify_id = $1',
       [sess.spotifyId]
     );
-    
+
     const lastFetch = result.rows[0]?.tracks_last_fetched_at;
-    
+
     if (!lastFetch) {
       return res.json({ needsRefresh: true });
     }
-    
+
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
+
     const needsRefresh = new Date(lastFetch) < oneWeekAgo;
-    
+
     res.json({ needsRefresh });
   } catch (err) {
     console.error('Error checking refresh status:', err);
@@ -746,16 +817,16 @@ app.get('/api/user/tracks/needs-refresh', async (req, res) => {
 app.post('/api/user/tracks/save', async (req, res) => {
   const sess = req.session;
   if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
-  
+
   const { tracks, audioFeatures } = req.body;
-  
+
   try {
     await pool.query('BEGIN');
-    
+
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
       const features = audioFeatures.find(f => f.id === track.id);
-      
+
       let spotifyId = track.id;
       if (track.href && track.href.includes('spotify.com/track/')) {
         const parts = track.href.split('/track/');
@@ -763,9 +834,9 @@ app.post('/api/user/tracks/save', async (req, res) => {
           spotifyId = parts[1].split('?')[0];
         }
       }
-      
+
       const reccoId = track.id;
-      
+
       await pool.query(
         `INSERT INTO tracks (spotify_track_id, recco_track_id, track_info, audio_features)
          VALUES ($1, $2, $3, $4)
@@ -776,7 +847,7 @@ app.post('/api/user/tracks/save', async (req, res) => {
            audio_features = $4`,
         [spotifyId, reccoId, JSON.stringify(track), JSON.stringify(features || {})]
       );
-      
+
       await pool.query(
         `INSERT INTO user_tracks (user_id, spotify_track_id, rank)
          VALUES ($1, $2, $3)
@@ -785,12 +856,12 @@ app.post('/api/user/tracks/save', async (req, res) => {
         [sess.spotifyId, spotifyId, i + 1]
       );
     }
-    
+
     await pool.query(
       'UPDATE users SET tracks_last_fetched_at = NOW() WHERE spotify_id = $1',
       [sess.spotifyId]
     );
-    
+
     await pool.query('COMMIT');
     res.json({ success: true, tracksSaved: tracks.length });
   } catch (err) {
@@ -804,7 +875,7 @@ app.post('/api/user/tracks/save', async (req, res) => {
 app.get('/api/user/tracks/from-db', async (req, res) => {
   const sess = req.session;
   if (!sess || !sess.spotifyId) return res.status(401).json({ error: 'Not authenticated' });
-  
+
   try {
     const result = await pool.query(
       `SELECT t.track_info, t.audio_features, ut.rank
@@ -814,7 +885,7 @@ app.get('/api/user/tracks/from-db', async (req, res) => {
        ORDER BY ut.rank ASC`,
       [sess.spotifyId]
     );
-    
+
     res.json({
       tracks: result.rows.map(row => row.track_info),
       audioFeatures: result.rows.map(row => row.audio_features)

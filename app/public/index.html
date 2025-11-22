@@ -1,33 +1,49 @@
 <!-- This page contains the users island -->
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" 
-      content="width=device-width, 
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, 
       initial-scale=1">
-    <title>Island Home</title>
-    <style>
-        body { margin: 0; }
-       /* top-left profile avatar */
-       #profile_link { position: fixed; top: 12px; left: 12px; z-index: 1200; display: block; }
-       #top_avatar {
-         width: 96px;
-         height: 96px;
-         border-radius: 50%;
-         object-fit: cover;
-         box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-         border: 2px solid #fff;
-         cursor: pointer;
-         display: block;
-       }
-    </style>
-  </head>
-  <body>
-    <a id="profile_link" href="/Profile.html" title="Your profile">
-      <img id="top_avatar" src="" alt="" hidden>
-    </a>
-    <script type="module" src="/src/island.js"></script>
-    <script src="/src/tracks.js"></script>
-  </body>
+  <title>Island Home</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    /* top-left profile avatar */
+    #profile_link {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 1200;
+      display: block;
+    }
+
+    #top_avatar {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      border: 2px solid #fff;
+      cursor: pointer;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <a id="profile_link" href="/Profile.html" title="Your profile">
+    <img id="top_avatar" src="" alt="" hidden>
+  </a>
+  <a id="feed_link" href="/feed.html" title="Feed"
+    style="position:fixed; top:12px; left:120px; z-index:1200; display:block; text-decoration:none; background:rgba(255,255,255,0.8); padding:0.5rem 1rem; border-radius:20px; font-weight:bold; color:#333; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+    Feed
+  </a>
+  <script type="module" src="/src/island.js"></script>
+  <script src="/src/tracks.js"></script>
+</body>
+
 </html>
