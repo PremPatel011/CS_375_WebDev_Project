@@ -1,87 +1,92 @@
 <!-- This page contains the users profile information -->
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>My Profile</title>
-    <link rel="stylesheet" href="/css/profile.css">
-  </head>
-  <body>
-    <main class="container">
 
-      <aside class="card" aria-labelledby="profile-heading">
-        <div id="profile">
-          <div class="avatar-row">
-            <img id="avatar" class="avatar" />
-            <div class="profile-meta">
-              <h2 id="profile-heading">Your Spotify profile</h2>
-              <p>Connected account info is shown here. Use the form below to customize your site profile.</p>
-            </div>
-          </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Profile</title>
+  <link rel="stylesheet" href="/css/profile.css">
+</head>
 
-          <div>
-            <label for="display_name">Spotify display name</label>
-            <input id="display_name" readonly />
-          </div>
+<body>
+  <main class="container">
 
-          <div>
-            <label for="username">Username (site)</label>
-            <input id="username" />
-          </div>
-
-          <div class="upload-row">
-            <input type="file" id="avatar_file" accept="image/*" />
-            <button id="upload_avatar" class="btn-small btn-primary" type="button">Upload profile picture</button>
-          </div>
-          
-          <div>
-            <label for="bio">Bio</label>
-            <textarea id="bio" rows="4" placeholder="Tell people about yourself..."></textarea>
-          </div>
-
-          <div class="btn-row">
-            <button id="save" class="btn-primary" type="button">Save profile</button>
-            <button id="logout" class="btn-ghost" type="button">Log out</button>
+    <aside class="card" aria-labelledby="profile-heading">
+      <div id="profile">
+        <div class="avatar-row">
+          <img id="avatar" class="avatar" />
+          <div class="profile-meta">
+            <h2 id="profile-heading">Your Spotify profile</h2>
+            <p>Connected account info is shown here. Use the form below to customize your site profile.</p>
           </div>
         </div>
-      </aside>
 
-      <section class="right-col">
-        <div class="card" id="posts">
-          <h2>My Posts</h2>
-          <div class="create">
-            <label for="post_content">Create a post</label>
-            <textarea id="post_content" rows="3" placeholder="What's on your mind?"></textarea>
-            <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
-              <button id="create_post" class="btn-primary" style="padding:0.5rem 0.8rem;">Post</button>
-            </div>
-          </div>
-          <div id="posts_list"></div>
+        <div>
+          <label for="display_name">Spotify display name</label>
+          <input id="display_name" readonly />
         </div>
 
-        <div class="card" id="spotify_top">
-          <h2>Your Top Spotify</h2>
+        <div>
+          <label for="username">Username (site)</label>
+          <input id="username" />
+        </div>
 
-          <div>
-            <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Genres</h3>
-            <div class="grid" id="genres_container"></div>
-          </div>
+        <div class="upload-row">
+          <input type="file" id="avatar_file" accept="image/*" />
+          <button id="upload_avatar" class="btn-small btn-primary" type="button">Upload profile picture</button>
+        </div>
 
-          <div style="margin-top:0.75rem;">
-            <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Artists</h3>
-            <div class="grid" id="artists_container"></div>
-          </div>
+        <div>
+          <label for="bio">Bio</label>
+          <textarea id="bio" rows="4" placeholder="Tell people about yourself..."></textarea>
+        </div>
 
-          <div style="margin-top:0.75rem;">
-            <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Tracks</h3>
-            <div class="grid" id="tracks_container"></div>
+        <div class="btn-row">
+          <button id="save" class="btn-primary" type="button">Save profile</button>
+          <a href="/feed.html" class="btn-ghost"
+            style="text-decoration:none; text-align:center; padding:0.5rem;">Feed</a>
+          <button id="logout" class="btn-ghost" type="button">Log out</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="right-col">
+      <div class="card" id="posts">
+        <h2>My Posts</h2>
+        <div class="create">
+          <label for="post_content">Create a post</label>
+          <textarea id="post_content" rows="3" placeholder="What's on your mind?"></textarea>
+          <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
+            <button id="create_post" class="btn-primary" style="padding:0.5rem 0.8rem;">Post</button>
           </div>
         </div>
-      </section>
+        <div id="posts_list"></div>
+      </div>
 
-    </main>
+      <div class="card" id="spotify_top">
+        <h2>Your Top Spotify</h2>
 
-    <script type="module" src="/src/profile.js"></script>
-  </body>
+        <div>
+          <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Genres</h3>
+          <div class="grid" id="genres_container"></div>
+        </div>
+
+        <div style="margin-top:0.75rem;">
+          <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Artists</h3>
+          <div class="grid" id="artists_container"></div>
+        </div>
+
+        <div style="margin-top:0.75rem;">
+          <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Tracks</h3>
+          <div class="grid" id="tracks_container"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="/src/profile.js"></script>
+</body>
+
 </html>
