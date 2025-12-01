@@ -32,6 +32,26 @@ let islandColors = {
   ocean: new THREE.Color(0x3a9bd4)
 }
 
+// Top-left profile avatar: fetch /api/me and show if available
+async function loadTopAvatar() {
+  try {
+    const res = await fetch('/api/me', { credentials: 'same-origin' });
+    if (!res.ok) return; // not authenticated or no avatar
+    const p = await res.json();
+    const img = document.getElementById('top_avatar');
+    if (!img) return;
+    if (p.profile_pic_url) {
+      img.src = p.profile_pic_url;
+      img.hidden = false;
+    } else {
+      img.hidden = true;
+    }
+  } catch (e) {
+    console.error('loadTopAvatar error', e);
+  }
+}
+loadTopAvatar();
+
 function updateColors(valence) {
   const skyCold = new THREE.Color(0x7A8B9C);     // cool gray-blue
   const skyWarm = new THREE.Color(0xFFB584);     // warm peachy orange
