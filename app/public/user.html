@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>User Profile</title>
+  <link rel="stylesheet" href="/css/profile.css">
+</head>
+
+<body>
+  <main class="container">
+
+    <aside class="card" aria-labelledby="profile-heading">
+      <div id="profile">
+        <div class="avatar-row">
+          <img id="avatar" class="avatar" />
+          <div class="profile-meta">
+            <h2 id="profile-heading">User Spotify profile</h2>
+            <p id="profile-sub">This profile is read-only — you cannot modify another user's profile.</p>
+          </div>
+        </div>
+
+        <div>
+          <label for="display_name">Spotify display name</label>
+          <input id="display_name" readonly />
+        </div>
+
+        <div>
+          <label for="username">Username (site)</label>
+          <input id="username" readonly />
+        </div>
+
+        <div>
+          <label for="bio">Bio</label>
+          <textarea id="bio" rows="4" placeholder="Tell people about yourself..." readonly></textarea>
+        </div>
+
+        <div class="btn-row" style="margin-top:0.75rem;">
+          <a id="visit_garden" class="btn-primary" href="#">Visit Garden</a>
+          <a id="back_home" class="btn-ghost" href="/index.html">Back Home</a>
+        </div>
+
+      </div>
+    </aside>
+
+    <section class="right-col">
+      <div class="card" id="posts">
+        <h2>User Posts</h2>
+        <div id="posts_list"></div>
+      </div>
+
+      <div class="card" id="spotify_top">
+        <h2>User's Top Spotify</h2>
+
+        <div>
+          <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Genres</h3>
+          <div class="grid" id="genres_container"></div>
+        </div>
+
+        <div style="margin-top:0.75rem;">
+          <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Artists</h3>
+          <div class="grid" id="artists_container"></div>
+        </div>
+
+        <div style="margin-top:0.75rem;">
+          <h3 style="margin:0.25rem 0 0.5rem 0; font-size:0.95rem; color:var(--muted);">Top Tracks</h3>
+          <div class="grid" id="tracks_container"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="/src/user.js"></script>
+</body>
+
+</html>

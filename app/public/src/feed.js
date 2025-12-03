@@ -98,22 +98,30 @@ function renderFeed(posts, append) {
         header.className = 'post-header';
 
         if (post.author && post.author.avatar_url) {
+            const a = document.createElement('a');
+            // link to newly added public profile page
+            a.href = `/user.html?id=${post.author.id || ''}`;
+            a.title = post.author.display_name || post.author.username || 'Profile';
             const avatar = document.createElement('img');
             avatar.src = post.author.avatar_url;
             avatar.className = 'post-avatar';
-            header.appendChild(avatar);
+            a.appendChild(avatar);
+            header.appendChild(a);
         } else {
             // Placeholder or no avatar
             const placeholder = document.createElement('div');
+            const anchor = document.createElement('a');
+            anchor.href = `/user.html?id=${post.author && post.author.id ? post.author.id : ''}`;
             placeholder.className = 'post-avatar';
             placeholder.style.backgroundColor = '#e0e0e0';
             placeholder.style.display = 'flex';
             placeholder.style.alignItems = 'center';
             placeholder.style.justifyContent = 'center';
-            placeholder.textContent = (post.author.username || '?')[0].toUpperCase();
+            placeholder.textContent = (post.author && post.author.username ? post.author.username[0] : '?').toUpperCase();
             placeholder.style.color = '#666';
             placeholder.style.fontWeight = 'bold';
-            header.appendChild(placeholder);
+            anchor.appendChild(placeholder);
+            header.appendChild(anchor);
         }
 
         const authorInfo = document.createElement('div');
