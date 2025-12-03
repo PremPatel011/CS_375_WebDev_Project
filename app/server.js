@@ -274,6 +274,130 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+// Public endpoint: return spotify-like top data for a given user id (read-only)
+app.get('/api/users/:id/spotify-top', async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  if (Number.isNaN(userId)) return res.status(400).json({ error: 'Invalid id' });
+
+  try {
+    // get spotify_id for the user
+    const u = await pool.query('SELECT spotify_id FROM users WHERE id = $1', [userId]);
+    if (u.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    const spotifyId = u.rows[0].spotify_id;
+
+    // fetch saved tracks for this spotifyId
+    const q = `
+      SELECT t.track_info
+      FROM user_tracks ut
+      JOIN tracks t ON ut.spotify_track_id = t.spotify_track_id
+      WHERE ut.user_id = $1
+      ORDER BY ut.rank ASC
+      LIMIT 50
+    `;
+    const tracksRes = await pool.query(q, [spotifyId]);
+    const tracks = tracksRes.rows.map(r => r.track_info || r.track_info);
+
+    // build artists list and genre counts (best-effort from saved track_info)
+    const artistMap = new Map();
+    const genreCounts = {};
+    for (const tr of tracks) {
+      // track_info shape may vary—try multiple fallbacks
+      const artistsList = (tr.artists && Array.isArray(tr.artists)) ? tr.artists : (tr.artists_names ? tr.artists_names : []);
+      if (Array.isArray(artistsList)) {
+        for (const a of artistsList) {
+          const name = a.name || a;
+          const key = name || 'Unknown';
+          if (!artistMap.has(key)) artistMap.set(key, { name: key, image: (a && a.images && a.images[0] && a.images[0].url) || null, count: 0 });
+          const entry = artistMap.get(key);
+          entry.count = (entry.count || 0) + 1;
+        }
+      }
+      // attempt to read genres (if present on track_info or artist objects)
+      if (tr.genres && Array.isArray(tr.genres)) {
+        for (const g of tr.genres) genreCounts[g] = (genreCounts[g] || 0) + 1;
+      } else if (tr.artists && Array.isArray(tr.artists)) {
+        for (const a of tr.artists) {
+          if (a.genres && Array.isArray(a.genres)) {
+            for (const g of a.genres) genreCounts[g] = (genreCounts[g] || 0) + 1;
+          }
+        }
+      }
+    }
+
+    const artists = Array.from(artistMap.values())
+      .sort((a, b) => (b.count || 0) - (a.count || 0))
+      .slice(0, 12);
+
+    const genres = Object.entries(genreCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([name, count]) => ({ name, count }));
+
+    res.json({
+      artists,
+      tracks,
+      genres
+    });
+  } catch (err) {
+    console.error('GET /api/users/:id/spotify-top error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/users/:id/posts', async (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+  if (Number.isNaN(userId)) return res.status(400).json({ error: 'Invalid id' });
+
+  try {
+    const postsResult = await pool.query(
+      `SELECT id, content, created_at
+       FROM posts
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const posts = postsResult.rows;
+    if (posts.length === 0) return res.json([]);
+
+    const postIds = posts.map(p => p.id);
+    const commentsResult = await pool.query(
+      `SELECT c.id, c.post_id, c.content, c.created_at,
+              u.username AS author_username,
+              u.display_name AS author_display_name
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.post_id = ANY($1::int[])
+       ORDER BY c.created_at ASC`,
+      [postIds]
+    );
+
+    const commentsByPost = new Map();
+    for (const row of commentsResult.rows) {
+      if (!commentsByPost.has(row.post_id)) commentsByPost.set(row.post_id, []);
+      commentsByPost.get(row.post_id).push({
+        id: row.id,
+        content: row.content,
+        created_at: row.created_at,
+        author_username: row.author_username,
+        author_display_name: row.author_display_name
+      });
+    }
+
+    const withComments = posts.map(post => ({
+      id: post.id,
+      content: post.content,
+      created_at: post.created_at,
+      comments: commentsByPost.get(post.id) || []
+    }));
+
+    res.json(withComments);
+  } catch (err) {
+    console.error('GET /api/users/:id/posts error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Create a friendship link between two users
 app.post('/api/friendships', async (req, res) => {
   const sess = req.session;
@@ -492,6 +616,7 @@ app.get('/api/feed', async (req, res) => {
       content: post.content,
       created_at: post.created_at,
       author: {
+        id: post.user_id,
         username: post.author_username,
         display_name: post.author_display_name,
         avatar_url: post.author_avatar_url
