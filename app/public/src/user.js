@@ -319,8 +319,19 @@ async function loadPublicProfile() {
     }
 
     const visit = document.getElementById('visit_garden');
-    if (visit) visit.href = `/index.html?viewUser=${encodeURIComponent(id)}`;
+    
+    if (visit) {
+      const url = `/index.html?viewUser=${encodeURIComponent(id)}`;
+      if (visit.tagName === 'A') visit.href = url;
+      else visit.addEventListener('click', () => { window.location.href = url; });
+    }
 
+    const back = document.getElementById('back_home');
+    if (back) {
+      const homeUrl = '/index.html';
+      if (back.tagName === 'A') back.href = homeUrl;
+      else back.addEventListener('click', () => { window.location.href = homeUrl; });
+    }
     // load public spotify top for this user
     await renderSpotifyTopForUser(id);
 
