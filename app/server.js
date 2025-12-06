@@ -9,11 +9,8 @@ const path = require('path');
 const { URLSearchParams } = require('url');
 
 // Need to match the Spotify redirect URI (http://127.0.0.1:8000/...)
-// const port = 8000;
-// const hostname = "127.0.0.1";
-
-const port = process.env.PORT ? Number(process.env.PORT) : 8000;
-const hostname = process.env.HOST || '0.0.0.0';
+const port = 8000;
+const hostname = "127.0.0.1";
 
 const env = require("../env.json");
 const Pool = pg.Pool;
@@ -1052,10 +1049,6 @@ app.get('/api/user/tracks/from-db', async (req, res) => {
   }
 });
 
-// app.listen(port, hostname, () => {
-//   console.log(`Listening at: http://${hostname}:${port}`);
-// });
-
 app.listen(port, hostname, () => {
-  console.log(`Listening at: http://${hostname}:${port} (env PORT=${process.env.PORT || 'unset'})`);
+  console.log(`Listening at: http://${hostname}:${port}`);
 });
