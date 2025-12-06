@@ -258,6 +258,34 @@ app.put('/api/me', async (req, res) => {
   }
 });
 
+// GET suggested users (random 5 users not already friends)
+app.get('/api/users/suggested', async (req, res) => {
+  const sess = req.session;
+  if (!sess || !sess.userId) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    // Find users who are NOT the current user AND NOT in a friendship with current user
+    // We use a subquery to find all friend IDs
+    const q = `
+      SELECT id, username, display_name, profile_pic_url
+      FROM users
+      WHERE id != $1
+      AND id NOT IN (
+        SELECT user_b_id FROM friendships WHERE user_a_id = $1
+        UNION
+        SELECT user_a_id FROM friendships WHERE user_b_id = $1
+      )
+      ORDER BY RANDOM()
+      LIMIT 5
+    `;
+    const result = await pool.query(q, [sess.userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('GET /api/users/suggested error', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET public profile (by user id) — excludes email
 app.get('/api/users/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
