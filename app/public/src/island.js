@@ -226,9 +226,11 @@ function showErrorOverlay(msg) {
     document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
+    controls.maxDistance = 100;
+    controls.minDistance = 50;
+    controls.maxPolarAngle = Math.PI/2.2;
     controls.target.set(0, 0, 0);
     controls.enableDamping = true;
-    controls.update();
 
     scene.background = new THREE.Color(islandColors.sky);
     scene.add(new THREE.HemisphereLight(0x88ccff, 0x226622, 0.6));
@@ -268,7 +270,7 @@ function showErrorOverlay(msg) {
         const x = vertices[i], y = vertices[i + 1];
         const loudness = (audio.loudness + 60) / 60;
         const dist = Math.sqrt(x * x + y * y);
-        const maxDist = size * 0.5 * Math.max(0.01, loudness);
+        const maxDist = size * 0.35 * Math.max(0.01, loudness);
         const normDist = dist / Math.max(1e-6, maxDist);
 
         const edgeFalloff = Math.pow(Math.max(0, 1 - Math.pow(normDist, 2.2)), 1.2);

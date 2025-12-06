@@ -8,7 +8,36 @@
       initial-scale=1">
     <title>Login</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 2rem; }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 2rem;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -2;
+        pointer-events: none;
+        display: block;
+      }
+
+      .bg-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+
+        background: rgba(0, 0, 0, 0.5);
+
+        z-index: -1;
+        pointer-events: none;
+      }
       
       .spotify-btn {
         display: inline-block;
@@ -20,6 +49,7 @@
         cursor: pointer;
         border-radius: 4px;
         text-align: center;
+        z-index: 10;
       }
       .spotify-container { text-align: center; margin-top: 1rem; }
     </style>
@@ -27,10 +57,14 @@
   <body>
     <h1>Login</h1>
 
+
     <div class="spotify-container">
       <button id="spotifyLogin" class="spotify-btn" type="button">Log in with Spotify</button>
     </div>
 
+    <div class="bg-overlay"></div>
+
+    <script type="module" src="/src/loginIsland.js"></script>
     <script>
       // Spotify login button initiates server-side OAuth redirect
       document.getElementById('spotifyLogin').addEventListener('click', () => {
