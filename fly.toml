@@ -1,0 +1,26 @@
+# Replace "your-app-name" with the name you choose (or run `fly launch` to create it)
+app = "Spotify-Island"
+primary_region = "ord"
+
+[build]
+  # Use a Node image so Fly will run `npm start` (reads from package.json -> "start")
+  image = "node:20-bullseye"
+
+[env]
+  NODE_ENV = "production"
+  # Do NOT commit secrets. Set Spotify secrets with `fly secrets set` (see notes below).
+
+[[services]]
+  internal_port = 8000
+  protocol = "tcp"
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
