@@ -247,3 +247,97 @@ getElement('create_post').addEventListener('click', (event) => {
 
 // Initial load
 loadFeed();
+loadSuggestedFriends();
+
+async function loadSuggestedFriends() {
+    const container = getElement('suggested_friends_list');
+
+    let suggestions = [];
+    try {
+        suggestions = await apiGet('/api/users/suggested');
+    } catch (err) {
+        console.error('Failed to load suggested friends', err);
+        container.innerHTML = '<p style="color:var(--muted); font-size:0.9rem;">Failed to load suggestions.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    if (!suggestions || suggestions.length === 0) {
+        container.innerHTML = '<p style="color:var(--muted); font-size:0.9rem;">No new suggestions.</p>';
+        return;
+    }
+
+    const ul = document.createElement('div');
+    ul.style.display = 'flex';
+    ul.style.flexDirection = 'column';
+    ul.style.gap = '0.5rem';
+
+    for (const user of suggestions) {
+        const item = document.createElement('div');
+        item.className = 'friend-item';
+
+        if (user.avatar_url) {
+            const img = document.createElement('img');
+            img.src = user.avatar_url;
+            img.className = 'friend-avatar';
+            item.appendChild(img);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'friend-avatar';
+            placeholder.textContent = (user.username || '?')[0].toUpperCase();
+            item.appendChild(placeholder);
+        }
+
+        const info = document.createElement('div');
+        info.className = 'friend-info';
+
+        const name = document.createElement('span');
+        name.className = 'friend-name';
+        name.textContent = user.display_name || user.username;
+        info.appendChild(name);
+
+        const username = document.createElement('span');
+        username.className = 'friend-username';
+        username.textContent = `@${user.username}`;
+        info.appendChild(username);
+
+        item.appendChild(info);
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-icon';
+        btn.title = 'Add Friend';
+        btn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        `;
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                // POST call to add friend
+                await apiPost('/api/friendships', { friendId: user.id });
+
+                // Update UI to show success
+                btn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                `;
+                btn.title = 'Request Sent';
+                btn.style.cursor = 'default';
+            } catch (err) {
+                console.error('Failed to add friend', err);
+                alert('Failed to add friend');
+                btn.disabled = false;
+            }
+        });
+
+        item.appendChild(btn);
+        ul.appendChild(item);
+    }
+
+    container.appendChild(ul);
+}

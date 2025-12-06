@@ -13,7 +13,7 @@
     }
 
     .feed-container {
-      max-width: 700px;
+      max-width: 1100px;
       margin: 2rem auto;
       padding: 0 1rem;
     }
@@ -162,6 +162,115 @@
       opacity: 0.7;
       cursor: not-allowed;
     }
+
+    .feed-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .feed-main {
+      min-width: 0;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 5.5rem;
+    }
+
+    .sidebar-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid #eef3f2;
+    }
+
+    .sidebar-card h3 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #111827;
+      margin-bottom: 1rem;
+    }
+
+    .friend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .friend-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .friend-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+      object-fit: cover;
+      background-color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #666;
+    }
+
+    .friend-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .friend-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #111827;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .friend-username {
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: block;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.4rem;
+      border-radius: 50%;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background: rgba(29, 185, 84, 0.1);
+    }
+
+    /* responsive to smaller screens */
+    @media (max-width: 900px) {
+      .feed-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+        /* hide sidebar on smaller screens*/
+      }
+    }
   </style>
 </head>
 
@@ -176,21 +285,35 @@
   </nav>
 
   <main class="feed-container">
-    <div class="create-post-card">
-      <h2>Create a Post</h2>
-      <div class="create">
-        <textarea id="post_content" rows="3" placeholder="What's on your mind?"
-          style="width:100%; box-sizing:border-box; padding:0.8rem; border-radius:8px; border:1px solid #e6e9ee; resize:vertical; font-family:inherit;"></textarea>
-        <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
-          <button id="create_post" class="btn-primary">Post</button>
+    <div class="feed-layout">
+      <div class="feed-main">
+        <div class="create-post-card">
+          <h2>Create a Post</h2>
+          <div class="create">
+            <textarea id="post_content" rows="3" placeholder="What's on your mind?"
+              style="width:100%; box-sizing:border-box; padding:0.8rem; border-radius:8px; border:1px solid #e6e9ee; resize:vertical; font-family:inherit;"></textarea>
+            <div style="display:flex; justify-content:flex-end; margin-top:0.75rem;">
+              <button id="create_post" class="btn-primary">Post</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="posts_list"></div>
+
+        <div class="load-more-container">
+          <button id="load_more" class="btn-primary">Load More</button>
         </div>
       </div>
-    </div>
 
-    <div id="posts_list"></div>
-
-    <div class="load-more-container">
-      <button id="load_more" class="btn-primary">Load More</button>
+      <aside class="sidebar" id="suggested_friends_sidebar">
+        <div class="sidebar-card">
+          <h3>Suggested Friends</h3>
+          <div id="suggested_friends_list">
+            <!-- suggested friends will be injected here -->
+            <p style="color: var(--muted); font-size: 0.9rem;">Loading suggestions...</p>
+          </div>
+        </div>
+      </aside>
     </div>
   </main>
 
