@@ -13,6 +13,7 @@ To launch the app, follow these steps:
 - **Node.js** v18 or higher  
 - **npm** v9 or higher  
 - A modern browser (Chrome, Firefox, or Edge recommended)
+
 ## Database Setup
 
 This project requires a PostgreSQL database configured for user authentication and Spotify integration.
@@ -32,7 +33,7 @@ Run the following command from the project root:
 
 ```bash
 # Run this only if you have existing tables that are outdated and want them removed. 
-psql -U postgres -d garden -c "DROP TABLE IF EXISTS comments, posts, friendships, users CASCADE;"
+psql -U postgres -d garden -c "DROP TABLE IF EXISTS user_tracks, tracks, comments, posts, friendships, users CASCADE;"
 
 # Run this to create the tables
 psql -U postgres -d garden -f app/db/create_users.sql
@@ -50,8 +51,8 @@ Your `env.json` file should be located in the `app/` directory and include the d
   "port": 5432,
   "database": "garden",
   "spotify": {
-    "clientId": "YOUR_SPOTIFY_CLIENT_ID",
-    "clientSecret": "YOUR_SPOTIFY_CLIENT_SECRET",
+    "clientId": "97d0cedbc0234c93b099035493f63cd4",
+    "clientSecret": "bb44510d2bdd4a43a8984aa612ff581c",
     "redirectUri": "http://127.0.0.1:8000/auth/spotify/callback"
   }
 }
@@ -59,7 +60,7 @@ Your `env.json` file should be located in the `app/` directory and include the d
 
 ### 4. Verify the Connection
 
-When you start the server (`node server.js`), you should see a message like:
+You can do (`npm run start`), or cd into the app folder and start the server (`node server.js`). Once you start the server, you should see a message like:
 
 ```
 Connected to database garden
@@ -68,12 +69,6 @@ Connected to database garden
 This indicates the PostgreSQL pool connection was successfully established.
 
 
-## Running in Development
-
-To start the frontend and backend together, run:
-
-```bash
-npm run dev
-```
+## 5. Opening the app
 
 The app should be accessible at [http://localhost:8000/login.html](http://localhost:8000/login.html)
