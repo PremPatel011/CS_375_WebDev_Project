@@ -51,8 +51,8 @@ Your `env.json` file should be located in the `app/` directory and include the d
   "port": 5432,
   "database": "garden",
   "spotify": {
-    "clientId": "97d0cedbc0234c93b099035493f63cd4",
-    "clientSecret": "bb44510d2bdd4a43a8984aa612ff581c",
+    "clientId": "will_email_this",
+    "clientSecret": "will_email_this",
     "redirectUri": "http://127.0.0.1:8000/auth/spotify/callback"
   }
 }
